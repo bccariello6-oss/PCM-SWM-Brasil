@@ -68,7 +68,12 @@ const Auth: React.FC = () => {
                         {error && (
                             <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3 text-red-600 text-xs animate-in slide-in-from-top-2">
                                 <AlertCircle className="w-4 h-4 shrink-0" />
-                                <span>{error}</span>
+                                <div className="flex flex-col">
+                                    <span className="font-bold">{error}</span>
+                                    {!IS_MOCK_MODE && error.includes('inválidas') && (
+                                        <span className="text-[10px] mt-1 opacity-70">Dica: Se é seu primeiro acesso, use o <b>Novo Cadastro</b> abaixo.</span>
+                                    )}
+                                </div>
                             </div>
                         )}
 

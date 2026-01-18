@@ -33,7 +33,7 @@ const mockAuth = {
   getUser: async () => ({ data: { user: mockSession?.user || null }, error: null }),
   signInWithPassword: async ({ email, password }: any) => {
     // Basic simulation: any login works in mock mode
-    if (email && password.length >= 6) {
+    if (email) {
       mockSession = {
         access_token: 'mock-token',
         user: { id: 'mock-user-id', email, user_metadata: {} }
@@ -41,10 +41,10 @@ const mockAuth = {
       listeners.forEach(cb => cb('SIGNED_IN', mockSession));
       return { data: { session: mockSession, user: mockSession.user }, error: null };
     }
-    return { data: { session: null, user: null }, error: { message: 'Email ou senha inválidos no modo simulado.' } };
+    return { data: { session: null, user: null }, error: { message: 'Por favor, insira o e-mail.' } };
   },
   signUp: async ({ email, password }: any) => {
-    if (email && password.length >= 6) {
+    if (email) {
       return { data: { user: { id: 'mock-user-id', email }, session: null }, error: null };
     }
     return { data: { user: null, session: null }, error: { message: 'Erro ao cadastrar no modo simulado.' } };
