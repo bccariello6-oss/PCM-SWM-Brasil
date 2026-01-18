@@ -57,9 +57,12 @@ const Auth: React.FC = () => {
                         <img src="/assets/logo.png" alt="SWM Logo" className="h-16 object-contain" />
                     </div>
 
-                    <h2 className="text-blue-900 font-bold tracking-[0.2em] text-sm mb-10 text-center lg:text-left uppercase">
-                        {mode === 'signup' ? 'Novo Cadastro' : 'CSM SWM BRASIL'}
+                    <h2 className="text-blue-900 font-bold tracking-[0.2em] text-[13px] mb-1.5 text-center lg:text-left uppercase">
+                        {mode === 'signup' ? 'Novo Cadastro' : 'PCM SWM BRASIL'}
                     </h2>
+                    <p className="text-slate-500 font-bold text-[9px] mb-10 text-center lg:text-left uppercase tracking-widest opacity-80">
+                        {mode === 'signin' && 'Planejamento de Manutenção e Engenharia de Ativos'}
+                    </p>
 
                     <form onSubmit={handleAuth} className="space-y-8">
                         {error && (
@@ -130,7 +133,7 @@ const Auth: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-800 hover:bg-blue-900 text-white py-5 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-900/20 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                            className="w-full bg-[#001da0] hover:bg-[#001580] text-white py-4.5 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-900/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
                         >
                             {loading ? (
                                 <Loader2 className="w-5 h-5 animate-spin" />
