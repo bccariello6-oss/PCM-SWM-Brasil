@@ -172,34 +172,34 @@ const Auth: React.FC = () => {
             {/* Right Column - Brand Imagery */}
             <div className="hidden lg:block lg:w-[55%] relative overflow-hidden bg-slate-900">
                 <img
-                    src="/assets/factory.png"
-                    alt="Factory background"
-                    className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105 hover:scale-100 transition-transform duration-[10s] ease-linear"
+                    src="/assets/swm_factory_aerial.jpg"
+                    alt="SWM Factory Aerial View"
+                    className="absolute inset-0 w-full h-full object-cover opacity-70 scale-100 group-hover:scale-105 transition-transform duration-[15s] ease-linear"
                 />
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/80 via-transparent to-transparent"></div>
 
                 <div className="absolute top-1/2 left-20 -translate-y-1/2 max-w-xl space-y-8">
-                    <div className="inline-block px-4 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 rounded-full">
-                        <span className="text-white text-[10px] font-black uppercase tracking-[0.3em]">Operação Brasil</span>
+                    <div className="inline-block px-4 py-1.5 bg-blue-600/20 backdrop-blur-md border border-blue-400/30 rounded-full">
+                        <span className="text-white text-[10px] font-black uppercase tracking-[0.3em]">Gestão de Ativos</span>
                     </div>
 
                     <h2 className="text-6xl font-black text-white leading-tight">
-                        Inovação e Qualidade em <span className="text-blue-400 italic">Papéis.</span>
+                        Excelência em <span className="text-blue-400 italic">Planejamento.</span>
                     </h2>
 
-                    <p className="text-blue-100/70 text-lg font-medium leading-relaxed max-w-md">
-                        Garantindo a eficiência operacional através da gestão moderna de ativos e materiais do grupo SWM.
+                    <p className="text-blue-50/80 text-lg font-medium leading-relaxed max-w-sm">
+                        Conectando processos e tecnologia para garantir a máxima disponibilidade industrial e confiabilidade.
                     </p>
                 </div>
 
                 <div className="absolute bottom-20 left-20 flex gap-20">
                     <div className="space-y-1">
-                        <p className="text-4xl font-black text-white tracking-tighter">100%</p>
-                        <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em]">Disponibilidade</p>
+                        <p className="text-4xl font-black text-white tracking-tighter">OEE</p>
+                        <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em]">Otimização</p>
                     </div>
                     <div className="space-y-1">
-                        <p className="text-4xl font-black text-white tracking-tighter">+500</p>
-                        <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em]">Colaboradores</p>
+                        <p className="text-4xl font-black text-white tracking-tighter">PCM</p>
+                        <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em]">Engenharia</p>
                     </div>
                 </div>
 
