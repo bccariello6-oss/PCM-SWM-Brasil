@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { supabase, IS_MOCK_MODE } from '../supabaseClient';
-import { LogIn, Mail, Lock, Loader2, AlertCircle, UserPlus, ArrowLeft, ShieldAlert, ArrowRight } from 'lucide-react';
+import { LogIn, Mail, Lock, Loader2, AlertCircle, ShieldAlert, ArrowRight, Settings, BarChart3, Clock } from 'lucide-react';
 
 const Auth: React.FC = () => {
     const [loading, setLoading] = useState(false);
@@ -40,97 +40,116 @@ const Auth: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full flex bg-white font-sans">
-            {/* Left Column - Login Form */}
-            <div className="w-full lg:w-[45%] p-8 lg:p-20 flex flex-col justify-center items-center lg:items-start relative">
+        <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 relative overflow-hidden font-sans">
+            {/* Professional Background Elements */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950"></div>
+            <div className="absolute inset-0 opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, #3b82f6 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 
-                {IS_MOCK_MODE && (
-                    <div className="absolute top-8 left-1/2 -translate-x-1/2 lg:left-20 lg:translate-x-0 bg-amber-500/10 border border-amber-500/20 p-2 px-4 rounded-full flex items-center gap-2 text-amber-700 text-[10px] font-bold uppercase tracking-wider animate-pulse whitespace-nowrap">
-                        <ShieldAlert className="w-3 h-3 shrink-0" />
-                        <span>Modo Simulação</span>
+            {/* Animated Glows */}
+            <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px] animate-pulse"></div>
+            <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+
+            {IS_MOCK_MODE && (
+                <div className="fixed top-8 left-1/2 -translate-x-1/2 bg-amber-500/10 border border-amber-500/20 p-2 px-4 rounded-full flex items-center gap-2 text-amber-500 text-[10px] font-bold uppercase tracking-widest z-50 animate-bounce">
+                    <ShieldAlert className="w-3 h-3 shrink-0" />
+                    <span>Ambiente de Simulação</span>
+                </div>
+            )}
+
+            <div className="w-full max-w-xl p-6 relative z-10">
+                {/* Main Premium Card */}
+                <div className="bg-white/[0.03] backdrop-blur-2xl border border-white/10 rounded-[40px] p-10 lg:p-16 shadow-[0_32px_120px_-15px_rgba(0,0,0,0.5)]">
+
+                    {/* Header Section */}
+                    <div className="text-center mb-12">
+                        <div className="mb-8 inline-flex items-center justify-center p-4 bg-white rounded-2xl shadow-2xl shadow-blue-900/20">
+                            <img src="/assets/logo.png" alt="SWM Logo" className="h-12 object-contain" />
+                        </div>
+
+                        <div className="space-y-4">
+                            <h2 className="text-white font-black tracking-[0.3em] text-lg uppercase">
+                                {mode === 'signup' ? 'Novo Cadastro' : 'PCM SWM BRASIL'}
+                            </h2>
+                            <div className="h-0.5 w-12 bg-blue-600 mx-auto rounded-full"></div>
+                            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em] max-w-xs mx-auto leading-relaxed">
+                                Planejamento de Manutenção & Engenharia de Ativos
+                            </p>
+                        </div>
                     </div>
-                )}
-
-                <div className="w-full max-w-sm">
-                    {/* Logo */}
-                    <div className="mb-12 flex justify-center lg:justify-start">
-                        <img src="/assets/logo.png" alt="SWM Logo" className="h-16 object-contain" />
-                    </div>
-
-                    <h2 className="text-blue-900 font-bold tracking-[0.2em] text-[13px] mb-1.5 text-center lg:text-left uppercase">
-                        {mode === 'signup' ? 'Novo Cadastro' : 'PCM SWM BRASIL'}
-                    </h2>
-                    <p className="text-slate-500 font-bold text-[9px] mb-10 text-center lg:text-left uppercase tracking-widest opacity-80">
-                        {mode === 'signin' && 'Planejamento de Manutenção e Engenharia de Ativos'}
-                    </p>
 
                     <form onSubmit={handleAuth} className="space-y-8">
                         {error && (
-                            <div className="bg-red-50 border border-red-100 p-4 rounded-xl flex items-center gap-3 text-red-600 text-xs animate-in slide-in-from-top-2">
-                                <AlertCircle className="w-4 h-4 shrink-0" />
-                                <div className="flex flex-col">
+                            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl flex items-center gap-4 text-red-400 text-xs animate-in fade-in zoom-in duration-300">
+                                <AlertCircle className="w-5 h-5 shrink-0" />
+                                <div className="flex flex-col gap-1">
                                     <span className="font-bold">{error}</span>
                                     {!IS_MOCK_MODE && error.includes('inválidas') && (
-                                        <span className="text-[10px] mt-1 opacity-70">Dica: Se é seu primeiro acesso, use o <b>Novo Cadastro</b> abaixo.</span>
+                                        <span className="text-[10px] opacity-70">Utilize o <b>Novo Cadastro</b> se for seu primeiro acesso.</span>
                                     )}
                                 </div>
                             </div>
                         )}
 
                         {message && (
-                            <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex items-center gap-3 text-emerald-600 text-xs animate-in slide-in-from-top-2">
-                                <AlertCircle className="w-4 h-4 shrink-0" />
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl flex items-center gap-4 text-emerald-400 text-xs animate-in fade-in zoom-in duration-300">
+                                <AlertCircle className="w-5 h-5 shrink-0" />
                                 <span>{message}</span>
                             </div>
                         )}
 
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">
-                                E-mail ou Matrícula
-                            </label>
-                            <div className="relative group">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                                <input
-                                    type="email"
-                                    placeholder="exemplo@swm-intl.com"
-                                    className="w-full pl-12 pr-4 py-4 bg-blue-50/50 border-none rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/20 transition-all font-medium placeholder:text-slate-400"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="flex justify-between items-center ml-1">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">
-                                    Senha
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                                    Identificação do Usuário
                                 </label>
-                                {mode === 'signin' && (
-                                    <button type="button" className="text-[10px] font-bold text-blue-600 hover:text-blue-800 transition-colors uppercase tracking-widest">
-                                        Esqueci minha senha
-                                    </button>
-                                )}
+                                <div className="relative group">
+                                    <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-all" />
+                                    <input
+                                        type="email"
+                                        placeholder="seu-email@swm-intl.com"
+                                        className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/5 rounded-2xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:bg-white/10 transition-all placeholder:text-slate-600 font-medium"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                </div>
                             </div>
-                            <div className="relative group">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
-                                <input
-                                    type="password"
-                                    placeholder="••••••••"
-                                    className="w-full pl-12 pr-4 py-4 bg-blue-50/50 border-none rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/20 transition-all font-medium placeholder:text-slate-400"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    minLength={6}
-                                />
+
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center ml-1">
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                        Senha de Acesso
+                                    </label>
+                                    {mode === 'signin' && (
+                                        <button type="button" className="text-[10px] font-bold text-blue-500 hover:text-blue-400 transition-colors uppercase tracking-widest">
+                                            Recuperar Senha
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="relative group">
+                                    <Lock className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-all" />
+                                    <input
+                                        type="password"
+                                        placeholder="••••••••"
+                                        className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/5 rounded-2xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:bg-white/10 transition-all placeholder:text-slate-600 font-medium"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                    />
+                                </div>
                             </div>
                         </div>
 
                         {mode === 'signin' && (
                             <div className="flex items-center gap-3 ml-1">
-                                <input type="checkbox" id="remember" className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-600/20" />
-                                <label htmlFor="remember" className="text-[11px] font-bold text-slate-500 uppercase tracking-widest cursor-pointer">
-                                    Manter conectado
+                                <input
+                                    type="checkbox"
+                                    id="remember"
+                                    className="w-5 h-5 rounded-lg border-white/10 bg-white/5 text-blue-600 focus:ring-blue-600/30 focus:ring-offset-slate-950"
+                                />
+                                <label htmlFor="remember" className="text-[11px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer hover:text-white transition-colors">
+                                    Manter sessão ativa
                                 </label>
                             </div>
                         )}
@@ -138,73 +157,52 @@ const Auth: React.FC = () => {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-[#001da0] hover:bg-[#001580] text-white py-4.5 rounded-xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-blue-900/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                            className="w-full bg-blue-600 hover:bg-blue-500 text-white py-6 rounded-2xl font-black text-sm uppercase tracking-[0.25em] shadow-[0_20px_40px_-10px_rgba(37,99,235,0.4)] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-4 group"
                         >
                             {loading ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="w-6 h-6 animate-spin" />
                             ) : (
                                 <>
-                                    <span>{mode === 'signup' ? 'Confirmar Cadastro' : 'Entrar no Portal'}</span>
-                                    <ArrowRight className="w-4 h-4" />
+                                    <span>{mode === 'signup' ? 'Cadastrar Acesso' : 'Entrar no Portal de PCM'}</span>
+                                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}
                         </button>
                     </form>
 
-                    <div className="mt-16 text-center space-y-4">
-                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">
-                            {mode === 'signup' ? 'Já possui acesso?' : 'Não tem uma conta?'}
-                        </p>
+                    {/* Footer Info */}
+                    <div className="mt-12 pt-12 border-t border-white/5 grid grid-cols-3 gap-4">
+                        <div className="text-center space-y-1">
+                            <Settings className="w-4 h-4 text-blue-500 mx-auto opacity-50" />
+                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Otimização</p>
+                        </div>
+                        <div className="text-center space-y-1">
+                            <BarChart3 className="w-4 h-4 text-blue-500 mx-auto opacity-50" />
+                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Confiabilidade</p>
+                        </div>
+                        <div className="text-center space-y-1">
+                            <Clock className="w-4 h-4 text-blue-500 mx-auto opacity-50" />
+                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-tighter">Disponibilidade</p>
+                        </div>
+                    </div>
+
+                    <div className="mt-12 text-center">
                         <button
                             onClick={() => {
                                 setMode(mode === 'signin' ? 'signup' : 'signin');
                                 setError(null);
                                 setMessage(null);
                             }}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-black uppercase tracking-[0.2em] transition-colors border-b-2 border-transparent hover:border-blue-600 pb-1"
+                            className="bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all border border-white/5"
                         >
-                            {mode === 'signup' ? 'Voltar para o Login' : 'Novo Cadastro'}
+                            {mode === 'signup' ? '← Voltar ao Login' : 'Solicitar Novo Cadastro'}
                         </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Right Column - Brand Imagery */}
-            <div className="hidden lg:block lg:w-[55%] relative overflow-hidden bg-slate-900">
-                <img
-                    src="/assets/swm_factory_aerial.jpg"
-                    alt="SWM Factory Aerial View"
-                    className="absolute inset-0 w-full h-full object-cover opacity-70 scale-100 group-hover:scale-105 transition-transform duration-[15s] ease-linear"
-                />
-                <div className="absolute inset-0 bg-gradient-to-tr from-blue-900/80 via-transparent to-transparent"></div>
-
-                <div className="absolute top-1/2 left-20 -translate-y-1/2 max-w-xl space-y-8">
-                    <div className="inline-block px-4 py-1.5 bg-blue-600/20 backdrop-blur-md border border-blue-400/30 rounded-full">
-                        <span className="text-white text-[10px] font-black uppercase tracking-[0.3em]">Gestão de Ativos</span>
-                    </div>
-
-                    <h2 className="text-6xl font-black text-white leading-tight">
-                        Excelência em <span className="text-blue-400 italic">Planejamento.</span>
-                    </h2>
-
-                    <p className="text-blue-50/80 text-lg font-medium leading-relaxed max-w-sm">
-                        Conectando processos e tecnologia para garantir a máxima disponibilidade industrial e confiabilidade.
-                    </p>
-                </div>
-
-                <div className="absolute bottom-20 left-20 flex gap-20">
-                    <div className="space-y-1">
-                        <p className="text-4xl font-black text-white tracking-tighter">OEE</p>
-                        <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em]">Otimização</p>
-                    </div>
-                    <div className="space-y-1">
-                        <p className="text-4xl font-black text-white tracking-tighter">PCM</p>
-                        <p className="text-[10px] font-black text-blue-300 uppercase tracking-[0.2em]">Engenharia</p>
-                    </div>
-                </div>
-
-                {/* Industrial Grid Pattern Overlay */}
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
+                <p className="text-center mt-10 text-[9px] font-bold text-slate-600 uppercase tracking-[0.4em]">
+                    SWM International Engineering Group © 2026
+                </p>
             </div>
         </div>
     );
