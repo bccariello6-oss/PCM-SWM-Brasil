@@ -39,7 +39,7 @@ import * as XLSX from 'xlsx';
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState('planning');
   const [orders, setOrders] = useState<MaintenanceOrder[]>(mockOS);
-  const [technicians, setTechnicians] = useState<Technician[]>(mockTechnicians);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [shutdowns, setShutdowns] = useState<OperationalShutdown[]>(mockShutdowns);
   const [assets, setAssets] = useState<Asset[]>(mockAssets);
   const [session, setSession] = useState<any>(null);
@@ -85,13 +85,38 @@ const App: React.FC = () => {
   }, []);
 
   // Initial load simulation
+  // Fetch technicians from Supabase
+  const fetchTechnicians = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('technicians')
+        .select('*');
+
+      if (error) throw error;
+
+      // Map snake_case database fields to camelCase application fields
+      const formattedTechnicians: Technician[] = (data || []).map((t: any) => ({
+        id: t.id,
+        name: t.name,
+        discipline: t.discipline,
+        shift: t.shift,
+        isLeader: t.is_leader
+      }));
+
+      setTechnicians(formattedTechnicians);
+    } catch (err: any) {
+      console.error('Erro ao buscar técnicos:', err);
+      showNotification('Erro ao carregar técnicos: ' + err.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial load
   useEffect(() => {
     if (session) {
-      setIsLoading(true);
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 800);
-      return () => clearTimeout(timer);
+      fetchTechnicians();
     }
   }, [session]);
 
@@ -227,16 +252,49 @@ const App: React.FC = () => {
     setIsOSModalOpen(true);
   };
 
-  const handleSaveTechnician = (techData: Technician) => {
-    if (selectedTech && selectedTech.id) {
-      setTechnicians(prev => prev.map(t => t.id === selectedTech.id ? { ...t, ...techData } : t));
-    } else {
-      const techToAdd = { ...techData, id: `tech-${Date.now()}` };
-      setTechnicians(prev => [...prev, techToAdd]);
+  const handleSaveTechnician = async (techData: Technician) => {
+    setIsLoading(true);
+    try {
+      if (selectedTech && selectedTech.id) {
+        // Update existing technician
+        const { error } = await supabase
+          .from('technicians')
+          .update({
+            name: techData.name,
+            discipline: techData.discipline,
+            shift: techData.shift,
+            is_leader: techData.isLeader
+          })
+          .eq('id', selectedTech.id);
+
+        if (error) throw error;
+
+        await fetchTechnicians();
+        showNotification('Técnico atualizado com sucesso!');
+      } else {
+        // Create new technician
+        const { error } = await supabase
+          .from('technicians')
+          .insert([{
+            name: techData.name,
+            discipline: techData.discipline,
+            shift: techData.shift,
+            is_leader: techData.isLeader
+          }]);
+
+        if (error) throw error;
+
+        await fetchTechnicians();
+        showNotification('Novo técnico cadastrado com sucesso!');
+      }
+      setIsTechModalOpen(false);
+      setSelectedTech(undefined);
+    } catch (err: any) {
+      console.error('Erro ao salvar técnico:', err);
+      showNotification('Erro ao salvar técnico: ' + err.message, 'error');
+    } finally {
+      setIsLoading(false);
     }
-    showNotification('Cadastro de técnico salvo!');
-    setIsTechModalOpen(false);
-    setSelectedTech(undefined);
   };
 
   const handleEditTechnician = (tech: Technician) => {
@@ -244,10 +302,25 @@ const App: React.FC = () => {
     setIsTechModalOpen(true);
   };
 
-  const handleDeleteTechnician = (techId: string) => {
+  const handleDeleteTechnician = async (techId: string) => {
     if (confirm('Tem certeza que deseja excluir este técnico?')) {
-      setTechnicians(prev => prev.filter(t => t.id !== techId));
-      showNotification('Técnico removido do sistema.', 'error');
+      setIsLoading(true);
+      try {
+        const { error } = await supabase
+          .from('technicians')
+          .delete()
+          .eq('id', techId);
+
+        if (error) throw error;
+
+        await fetchTechnicians();
+        showNotification('Técnico removido do sistema.', 'error');
+      } catch (err: any) {
+        console.error('Erro ao excluir técnico:', err);
+        showNotification('Erro ao excluir técnico: ' + err.message, 'error');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -630,6 +703,7 @@ const App: React.FC = () => {
       {isOSModalOpen && (
         <OSForm
           os={selectedOS}
+          technicians={technicians}
           onClose={() => setIsOSModalOpen(false)}
           onSave={handleSaveOS}
         />

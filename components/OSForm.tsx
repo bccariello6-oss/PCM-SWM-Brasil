@@ -3,15 +3,16 @@ import React, { useState, useRef } from 'react';
 import { X, Save, Trash2, Settings2, UserPlus, User, History, Info, ChevronRight, Paperclip, FileText, UploadCloud, AlertCircle } from 'lucide-react';
 import { MaintenanceOrder, Discipline, OSType, OSStatus, Technician, LogEntry } from '../types';
 import { AREAS, DISCIPLINE_COLORS, WEEK_DAYS } from '../constants';
-import { mockTechnicians } from '../mockData';
+
 
 interface OSFormProps {
   os?: Partial<MaintenanceOrder>;
+  technicians: Technician[];
   onClose: () => void;
   onSave: (os: MaintenanceOrder, shouldClose?: boolean) => void;
 }
 
-const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
+const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'history' | 'attachments'>('details');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState<Partial<MaintenanceOrder>>(os || {
@@ -92,7 +93,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
 
         {/* Tabs */}
         <div className="flex border-b border-slate-100 bg-white">
-          <button 
+          <button
             onClick={() => setActiveTab('details')}
             className={`flex items-center gap-2 px-6 py-3 text-sm font-bold transition-all relative ${activeTab === 'details' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
@@ -100,7 +101,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
             Dados da OS
             {activeTab === 'details' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />}
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('attachments')}
             className={`flex items-center gap-2 px-6 py-3 text-sm font-bold transition-all relative ${activeTab === 'attachments' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
@@ -113,7 +114,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
             )}
             {activeTab === 'attachments' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />}
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('history')}
             className={`flex items-center gap-2 px-6 py-3 text-sm font-bold transition-all relative ${activeTab === 'history' ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
@@ -180,7 +181,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
                         onChange={e => setFormData({ ...formData, technicianId: e.target.value })}
                       >
                         <option value="">Responsável Principal...</option>
-                        {mockTechnicians.map(t => <option key={t.id} value={t.id}>{t.name} ({t.discipline})</option>)}
+                        {technicians.map(t => <option key={t.id} value={t.id}>{t.name} ({t.discipline})</option>)}
                       </select>
                     </div>
                     <div className="relative">
@@ -191,9 +192,9 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
                         onChange={e => setFormData({ ...formData, collaboratorId: e.target.value })}
                       >
                         <option value="">Colaborador / Ajudante...</option>
-                        {mockTechnicians.map(t => (
-                          <option 
-                            key={t.id} 
+                        {technicians.map(t => (
+                          <option
+                            key={t.id}
                             value={t.id}
                             disabled={t.id === formData.technicianId}
                           >
@@ -325,7 +326,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
 
           {activeTab === 'attachments' && (
             <div className="space-y-6">
-              <div 
+              <div
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-slate-200 rounded-3xl p-10 flex flex-col items-center justify-center gap-4 bg-slate-50 hover:bg-slate-100 hover:border-blue-300 transition-all cursor-pointer group"
               >
@@ -336,11 +337,11 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
                   <p className="text-sm font-bold text-slate-700">Clique para anexar arquivos</p>
                   <p className="text-xs text-slate-400 mt-1">PDF, JPG, PNG, DOCX (Max 10MB)</p>
                 </div>
-                <input 
-                  type="file" 
-                  multiple 
-                  className="hidden" 
-                  ref={fileInputRef} 
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  ref={fileInputRef}
                   onChange={handleFileAttach}
                 />
               </div>
@@ -356,7 +357,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
                         </div>
                         <span className="text-sm font-medium text-slate-700 truncate max-w-[400px]">{file}</span>
                       </div>
-                      <button 
+                      <button
                         onClick={() => removeAttachment(idx)}
                         className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
                       >
@@ -435,7 +436,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, onClose, onSave }) => {
               Excluir
             </button>
           ) : <div />}
-          
+
           <div className="flex gap-3">
             <button
               onClick={onClose}
