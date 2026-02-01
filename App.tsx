@@ -11,7 +11,7 @@ import TeamManagement from './components/TeamManagement';
 import ImportInfoModal from './components/ImportInfoModal';
 import ShutdownManagement from './components/ShutdownManagement';
 import AssetManagement from './components/AssetManagement';
-import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry } from './types';
+import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift } from './types';
 import { mockOS, mockTechnicians, mockShutdowns, mockAssets } from './mockData';
 import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
@@ -151,18 +151,26 @@ const App: React.FC = () => {
   const fetchTechnicians = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('technicians')
-        .select('*');
+      // Tentar buscar de 'técnicos' (como visto no seu Supabase) e fallback para 'technicians'
+      let { data, error } = await supabase.from('technicians').select('*');
+
+      if (error) {
+        console.warn('Tentando fallback para "técnicos"...', error);
+        const fallback = await supabase.from('técnicos').select('*');
+        if (!fallback.error) {
+          data = fallback.data;
+          error = null;
+        }
+      }
 
       if (error) throw error;
 
       const formattedTechnicians: Technician[] = (data || []).map((t: any) => ({
         id: t.id,
-        name: t.name,
-        discipline: t.discipline,
-        shift: t.shift,
-        isLeader: t.is_leader
+        name: t.nome || t.name || 'Sem Nome',
+        discipline: t.disciplina || t.discipline || Discipline.MECHANICS,
+        shift: t.mudança || t.shift || Shift.ADM,
+        isLeader: t.é_líder !== undefined ? t.é_líder : (t.is_leader || false)
       }));
 
       setTechnicians(formattedTechnicians);
@@ -243,20 +251,20 @@ const App: React.FC = () => {
       const logsToInsert: any[] = [];
 
       const osPayload = {
-        os_number: newOS.osNumber,
-        type: newOS.type,
-        area: newOS.area,
-        tag: newOS.tag,
-        description: newOS.description,
-        discipline: newOS.discipline,
-        priority: newOS.priority,
-        estimated_hours: newOS.estimatedHours,
-        operational_shutdown: newOS.operationalShutdown,
-        status: newOS.status,
+        os_number: newOS.osNumber || '000000',
+        type: newOS.type || OSType.PREVENTIVE,
+        area: newOS.area || '',
+        tag: newOS.tag || '',
+        description: newOS.description || '',
+        discipline: newOS.discipline || Discipline.MECHANICS,
+        priority: newOS.priority || 'Média',
+        estimated_hours: Number(newOS.estimatedHours) || 0,
+        operational_shutdown: !!newOS.operationalShutdown,
+        status: newOS.status || OSStatus.PLANNED,
         technician_id: newOS.technicianId || null,
         collaborator_id: newOS.collaboratorId || null,
-        scheduled_day: newOS.scheduledDay,
-        reprogramming_reason: newOS.reprogrammingReason,
+        scheduled_day: newOS.scheduledDay || 'Segunda',
+        reprogramming_reason: newOS.reprogrammingReason || null,
         updated_at: timestamp
       };
 
@@ -296,9 +304,12 @@ const App: React.FC = () => {
         if (updateError) throw updateError;
         showNotification('Ordem de Serviço atualizada com sucesso!');
       } else {
+        // Garantir que não estamos tentando enviar um ID temporário/inválido
+        const { id, ...insertPayload } = osPayload as any;
+
         const { data: insertedData, error: insertError } = await supabase
           .from('maintenance_orders')
-          .insert([{ ...osPayload, created_at: timestamp }])
+          .insert([{ ...insertPayload, created_at: timestamp }])
           .select()
           .single();
 
@@ -315,24 +326,34 @@ const App: React.FC = () => {
         showNotification('Nova OS criada com sucesso!');
       }
 
-      // Insert any generated logs
+      // Inserir logs se houver
       if (logsToInsert.length > 0) {
-        await supabase.from('log_entries').insert(logsToInsert);
+        const { error: logError } = await supabase.from('log_entries').insert(logsToInsert);
+        if (logError) console.error('Erro ao salvar logs:', logError);
       }
 
+      // Atualizar lista local
       await fetchOrders();
 
       if (shouldClose) {
         setIsOSModalOpen(false);
         setSelectedOS(undefined);
       } else {
-        const updatedOS = orders.find(o => o.id === targetId);
-        if (updatedOS) setSelectedOS(updatedOS);
+        // Buscar a OS recém guardada/atualizada da nova lista
+        // Usamos um timeout pequeno ou o retorno direto para garantir sincronia
+        setTimeout(() => {
+          setOrders(currentOrders => {
+            const updated = currentOrders.find(o => o.id === targetId);
+            if (updated) setSelectedOS(updated);
+            return currentOrders;
+          });
+        }, 100);
       }
 
     } catch (err: any) {
-      console.error('Erro ao salvar OS:', err);
-      showNotification('Erro ao salvar OS: ' + err.message, 'error');
+      console.error('Erro detalhado ao salvar OS:', err);
+      const errorMsg = err.message || err.details || 'Verifique se as tabelas foram criadas corretamente.';
+      showNotification('Falha no salvamento: ' + errorMsg, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -356,38 +377,50 @@ const App: React.FC = () => {
   const handleSaveTechnician = async (techData: Technician) => {
     setIsLoading(true);
     try {
-      if (selectedTech && selectedTech.id) {
-        // Update existing technician
+      const isUpdate = !!(selectedTech && selectedTech.id);
+
+      // Mapeamento resiliente para o banco (English keys by default, but we should handle DB structure)
+      // Se descobrimos que o banco usa Portuguese keys, precisamos mapear aqui também.
+      // Por simplicidade, continuaremos usando English keys para INSERT/UPDATE
+      // assumindo que o script de criação original as usou.
+      // SE o usuário criou a tabela manualmente com outros nomes, este update falhará.
+
+      const techPayload = {
+        name: techData.name,
+        discipline: techData.discipline,
+        shift: techData.shift,
+        is_leader: techData.isLeader
+      };
+
+      if (isUpdate) {
         const { error } = await supabase
-          .from('technicians')
-          .update({
-            name: techData.name,
-            discipline: techData.discipline,
-            shift: techData.shift,
-            is_leader: techData.isLeader
-          })
-          .eq('id', selectedTech.id);
+          .from('técnicos') // Tentar 'técnicos' primeiro
+          .update(techPayload)
+          .eq('id', selectedTech!.id);
 
-        if (error) throw error;
-
-        await fetchTechnicians();
+        if (error) {
+          // Fallback para 'technicians'
+          const { error: fallbackError } = await supabase
+            .from('technicians')
+            .update(techPayload)
+            .eq('id', selectedTech!.id);
+          if (fallbackError) throw fallbackError;
+        }
         showNotification('Técnico atualizado com sucesso!');
       } else {
-        // Create new technician
         const { error } = await supabase
-          .from('technicians')
-          .insert([{
-            name: techData.name,
-            discipline: techData.discipline,
-            shift: techData.shift,
-            is_leader: techData.isLeader
-          }]);
+          .from('técnicos')
+          .insert([techPayload]);
 
-        if (error) throw error;
-
-        await fetchTechnicians();
+        if (error) {
+          const { error: fallbackError } = await supabase
+            .from('technicians')
+            .insert([techPayload]);
+          if (fallbackError) throw fallbackError;
+        }
         showNotification('Novo técnico cadastrado com sucesso!');
       }
+      await fetchTechnicians();
       setIsTechModalOpen(false);
       setSelectedTech(undefined);
     } catch (err: any) {

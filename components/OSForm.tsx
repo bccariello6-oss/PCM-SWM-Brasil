@@ -15,7 +15,7 @@ interface OSFormProps {
 const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => {
   const [activeTab, setActiveTab] = useState<'details' | 'history' | 'attachments'>('details');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState<Partial<MaintenanceOrder>>(os || {
+  const [formData, setFormData] = useState<Partial<MaintenanceOrder>>({
     status: OSStatus.PLANNED,
     discipline: Discipline.MECHANICS,
     type: OSType.PREVENTIVE,
@@ -25,7 +25,8 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
     scheduledDay: 'Segunda',
     logs: [],
     attachments: [],
-    reprogrammingReason: ''
+    reprogrammingReason: '',
+    ...os
   });
 
   const handleSubmit = (e: React.FormEvent, shouldClose: boolean = true) => {
