@@ -245,22 +245,24 @@ const App: React.FC = () => {
     const currentUser = "Diogo Jesus";
     setIsLoading(true);
 
+    let osPayload: any = null;
+
     try {
       const isUpdate = !!(newOS.id || (selectedOS && selectedOS.id));
       let targetId = newOS.id || selectedOS?.id;
       const logsToInsert: any[] = [];
 
-      const osPayload = {
+      osPayload = {
         os_number: newOS.osNumber || '000000',
-        type: newOS.type || OSType.PREVENTIVE,
+        type: newOS.type || OSType.PREVENTIVE || 'Preventiva',
         area: newOS.area || '',
         tag: newOS.tag || '',
         description: newOS.description || '',
-        discipline: newOS.discipline || Discipline.MECHANICS,
+        discipline: newOS.discipline || Discipline.MECHANICS || 'Mecânica',
         priority: newOS.priority || 'Média',
         estimated_hours: Number(newOS.estimatedHours) || 0,
         operational_shutdown: !!newOS.operationalShutdown,
-        status: newOS.status || OSStatus.PLANNED,
+        status: newOS.status || OSStatus.PLANNED || 'Planejada',
         technician_id: newOS.technicianId || null,
         collaborator_id: newOS.collaboratorId || null,
         scheduled_day: newOS.scheduledDay || 'Segunda',
@@ -352,7 +354,8 @@ const App: React.FC = () => {
 
     } catch (err: any) {
       console.error('Erro detalhado ao salvar OS:', err);
-      const errorMsg = err.message || err.details || 'Verifique se as tabelas foram criadas corretamente.';
+      const payloadStr = JSON.stringify(osPayload);
+      const errorMsg = (err.message || err.details || 'Erro desconhecido') + ' | Dados: ' + payloadStr;
       showNotification('Falha no salvamento: ' + errorMsg, 'error');
     } finally {
       setIsLoading(false);
