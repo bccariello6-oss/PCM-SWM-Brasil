@@ -38,7 +38,7 @@ import * as XLSX from 'xlsx';
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState('planning');
-  const [orders, setOrders] = useState<MaintenanceOrder[]>(mockOS);
+  const [orders, setOrders] = useState<MaintenanceOrder[]>([]);
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [shutdowns, setShutdowns] = useState<OperationalShutdown[]>(mockShutdowns);
   const [assets, setAssets] = useState<Asset[]>(mockAssets);
@@ -85,6 +85,68 @@ const App: React.FC = () => {
   }, []);
 
   // Initial load simulation
+  // Fetch maintenance orders from Supabase
+  const fetchOrders = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch orders
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('maintenance_orders')
+        .select('*');
+
+      if (ordersError) throw ordersError;
+
+      // Fetch logs for these orders
+      const { data: logsData, error: logsError } = await supabase
+        .from('log_entries')
+        .select('*');
+
+      if (logsError) throw logsError;
+
+      // Group logs by order_id
+      const logsByOrder: { [key: string]: LogEntry[] } = {};
+      (logsData || []).forEach((log: any) => {
+        if (!logsByOrder[log.order_id]) logsByOrder[log.order_id] = [];
+        logsByOrder[log.order_id].push({
+          id: log.id,
+          timestamp: log.timestamp,
+          userName: log.user_name,
+          action: log.action,
+          field: log.field,
+          oldValue: log.old_value,
+          newValue: log.new_value
+        });
+      });
+
+      // Format orders
+      const formattedOrders: MaintenanceOrder[] = (ordersData || []).map((o: any) => ({
+        id: o.id,
+        osNumber: o.os_number,
+        type: o.type as OSType,
+        area: o.area,
+        tag: o.tag,
+        description: o.description,
+        discipline: o.discipline as Discipline,
+        priority: o.priority,
+        estimatedHours: Number(o.estimated_hours),
+        operationalShutdown: o.operational_shutdown,
+        status: o.status as OSStatus,
+        technicianId: o.technician_id,
+        collaboratorId: o.collaborator_id,
+        scheduledDay: o.scheduled_day,
+        reprogrammingReason: o.reprogramming_reason,
+        logs: logsByOrder[o.id] || []
+      }));
+
+      setOrders(formattedOrders);
+    } catch (err: any) {
+      console.error('Erro ao buscar ordens:', err);
+      showNotification('Erro ao carregar ordens: ' + err.message, 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch technicians from Supabase
   const fetchTechnicians = async () => {
     setIsLoading(true);
@@ -95,7 +157,6 @@ const App: React.FC = () => {
 
       if (error) throw error;
 
-      // Map snake_case database fields to camelCase application fields
       const formattedTechnicians: Technician[] = (data || []).map((t: any) => ({
         id: t.id,
         name: t.name,
@@ -117,6 +178,7 @@ const App: React.FC = () => {
   useEffect(() => {
     if (session) {
       fetchTechnicians();
+      fetchOrders();
     }
   }, [session]);
 
@@ -170,70 +232,109 @@ const App: React.FC = () => {
     });
   }, [technicians, searchTerm, filteredOrders, filterDiscipline, filterTechnician]);
 
-  const handleSaveOS = (newOS: MaintenanceOrder, shouldClose: boolean = true) => {
+  const handleSaveOS = async (newOS: MaintenanceOrder, shouldClose: boolean = true) => {
     const timestamp = new Date().toISOString();
     const currentUser = "Diogo Jesus";
+    setIsLoading(true);
 
-    // Check if it's an update (has ID) or a create (no ID or matching in selectedOS)
-    const isUpdate = !!(newOS.id || (selectedOS && selectedOS.id));
+    try {
+      const isUpdate = !!(newOS.id || (selectedOS && selectedOS.id));
+      let targetId = newOS.id || selectedOS?.id;
+      const logsToInsert: any[] = [];
 
-    if (isUpdate) {
-      const targetId = newOS.id || selectedOS?.id;
-      const oldOS = orders.find(o => o.id === targetId);
-      const logs: LogEntry[] = [...(oldOS?.logs || [])];
-
-      if (oldOS) {
-        if (oldOS.status !== newOS.status) {
-          logs.push({
-            id: `log-${Date.now()}-status`,
-            timestamp,
-            userName: currentUser,
-            action: newOS.status === OSStatus.REPROGRAMMED ? 'Reprogramação de OS' : 'Alteração de status',
-            field: 'status',
-            oldValue: oldOS.status,
-            newValue: newOS.status
-          });
-        }
-        if (oldOS.priority !== newOS.priority) {
-          logs.push({
-            id: `log-${Date.now()}-priority`,
-            timestamp,
-            userName: currentUser,
-            action: 'Alteração de prioridade',
-            field: 'prioridade',
-            oldValue: oldOS.priority,
-            newValue: newOS.priority
-          });
-        }
-      }
-
-      setOrders(prev => prev.map(o => o.id === targetId ? { ...o, ...newOS, logs } : o));
-      if (!shouldClose) {
-        setSelectedOS({ ...newOS, logs });
-      }
-      showNotification('Ordem de Serviço atualizada com sucesso!');
-    } else {
-      const osId = `os-${Date.now()}`;
-      const osToAdd: MaintenanceOrder = {
-        ...newOS,
-        id: osId,
-        logs: [{
-          id: `log-${Date.now()}-create`,
-          timestamp,
-          userName: currentUser,
-          action: 'Criação da OS'
-        }]
+      const osPayload = {
+        os_number: newOS.osNumber,
+        type: newOS.type,
+        area: newOS.area,
+        tag: newOS.tag,
+        description: newOS.description,
+        discipline: newOS.discipline,
+        priority: newOS.priority,
+        estimated_hours: newOS.estimatedHours,
+        operational_shutdown: newOS.operationalShutdown,
+        status: newOS.status,
+        technician_id: newOS.technicianId || null,
+        collaborator_id: newOS.collaboratorId || null,
+        scheduled_day: newOS.scheduledDay,
+        reprogramming_reason: newOS.reprogrammingReason,
+        updated_at: timestamp
       };
-      setOrders(prev => [...prev, osToAdd]);
-      if (!shouldClose) {
-        setSelectedOS(osToAdd);
-      }
-      showNotification('Nova OS criada com sucesso!');
-    }
 
-    if (shouldClose) {
-      setIsOSModalOpen(false);
-      setSelectedOS(undefined);
+      if (isUpdate) {
+        const oldOS = orders.find(o => o.id === targetId);
+
+        if (oldOS) {
+          if (oldOS.status !== newOS.status) {
+            logsToInsert.push({
+              order_id: targetId,
+              user_name: currentUser,
+              action: newOS.status === OSStatus.REPROGRAMMED ? 'Reprogramação de OS' : 'Alteração de status',
+              field: 'status',
+              old_value: oldOS.status,
+              new_value: newOS.status,
+              timestamp
+            });
+          }
+          if (oldOS.priority !== newOS.priority) {
+            logsToInsert.push({
+              order_id: targetId,
+              user_name: currentUser,
+              action: 'Alteração de prioridade',
+              field: 'prioridade',
+              old_value: oldOS.priority,
+              new_value: newOS.priority,
+              timestamp
+            });
+          }
+        }
+
+        const { error: updateError } = await supabase
+          .from('maintenance_orders')
+          .update(osPayload)
+          .eq('id', targetId);
+
+        if (updateError) throw updateError;
+        showNotification('Ordem de Serviço atualizada com sucesso!');
+      } else {
+        const { data: insertedData, error: insertError } = await supabase
+          .from('maintenance_orders')
+          .insert([{ ...osPayload, created_at: timestamp }])
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        targetId = insertedData.id;
+
+        logsToInsert.push({
+          order_id: targetId,
+          user_name: currentUser,
+          action: 'Criação da OS',
+          timestamp
+        });
+
+        showNotification('Nova OS criada com sucesso!');
+      }
+
+      // Insert any generated logs
+      if (logsToInsert.length > 0) {
+        await supabase.from('log_entries').insert(logsToInsert);
+      }
+
+      await fetchOrders();
+
+      if (shouldClose) {
+        setIsOSModalOpen(false);
+        setSelectedOS(undefined);
+      } else {
+        const updatedOS = orders.find(o => o.id === targetId);
+        if (updatedOS) setSelectedOS(updatedOS);
+      }
+
+    } catch (err: any) {
+      console.error('Erro ao salvar OS:', err);
+      showNotification('Erro ao salvar OS: ' + err.message, 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -355,7 +456,7 @@ const App: React.FC = () => {
 
     try {
       const reader = new FileReader();
-      reader.onload = (evt) => {
+      reader.onload = async (evt) => {
         try {
           const bstr = evt.target?.result;
           const wb = XLSX.read(bstr, { type: 'binary' });
@@ -365,35 +466,42 @@ const App: React.FC = () => {
 
           if (data.length === 0) throw new Error("O arquivo selecionado está vazio.");
 
-          const newOrders: MaintenanceOrder[] = data.map((row, index) => ({
-            id: `os-import-${Date.now()}-${index}`,
-            osNumber: String(row['OS'] || row['Número'] || row['osNumber'] || ''),
-            type: (row['Tipo'] || OSType.PREVENTIVE) as OSType,
-            area: String(row['Área'] || ''),
-            tag: String(row['TAG'] || ''),
-            description: String(row['Descrição'] || ''),
-            discipline: (row['Disciplina'] || Discipline.MECHANICS) as Discipline,
-            priority: (row['Prioridade'] || 'Média') as any,
-            estimatedHours: Number(row['Horas'] || 1),
-            operationalShutdown: row['Parada'] === 'Sim' || row['Parada'] === true,
-            status: OSStatus.PLANNED,
-            technicianId: technicians.find(t => t.name.toLowerCase() === String(row['Técnico'] || '').toLowerCase())?.id,
-            collaboratorId: technicians.find(t => t.name.toLowerCase() === String(row['Colaborador'] || '').toLowerCase())?.id,
-            scheduledDay: String(row['Dia'] || 'Segunda'),
-            logs: [{
-              id: `log-import-${Date.now()}-${index}`,
-              timestamp: new Date().toISOString(),
-              userName: "Sistema (Importação)",
-              action: 'Importação via Planilha'
-            }]
-          })).filter(os => os.osNumber !== '');
+          const timestamp = new Date().toISOString();
+          const ordersToInsert = data.map((row) => {
+            const osNumber = String(row['OS'] || row['Número'] || row['osNumber'] || '');
+            if (!osNumber) return null;
 
-          if (newOrders.length > 0) {
-            setOrders(prev => [...prev, ...newOrders]);
+            return {
+              os_number: osNumber,
+              type: (row['Tipo'] || OSType.PREVENTIVE) as OSType,
+              area: String(row['Área'] || ''),
+              tag: String(row['TAG'] || ''),
+              description: String(row['Descrição'] || ''),
+              discipline: (row['Disciplina'] || Discipline.MECHANICS) as Discipline,
+              priority: (row['Prioridade'] || 'Média') as any,
+              estimated_hours: Number(row['Horas'] || 1),
+              operational_shutdown: row['Parada'] === 'Sim' || row['Parada'] === true,
+              status: OSStatus.PLANNED,
+              technician_id: technicians.find(t => t.name.toLowerCase() === String(row['Técnico'] || '').toLowerCase())?.id || null,
+              collaborator_id: technicians.find(t => t.name.toLowerCase() === String(row['Colaborador'] || '').toLowerCase())?.id || null,
+              scheduled_day: String(row['Dia'] || 'Segunda'),
+              created_at: timestamp,
+              updated_at: timestamp
+            };
+          }).filter(os => os !== null);
+
+          if (ordersToInsert.length > 0) {
+            const { error: insertError } = await supabase
+              .from('maintenance_orders')
+              .insert(ordersToInsert);
+
+            if (insertError) throw insertError;
+
+            await fetchOrders();
             setIsLoading(false);
-            showNotification(`${newOrders.length} ordens importadas com sucesso!`);
+            showNotification(`${ordersToInsert.length} ordens importadas e sincronizadas com sucesso!`);
           } else {
-            throw new Error("Não foram encontradas ordens válidas. Verifique o cabeçalho das colunas.");
+            throw new Error("Não foram encontradas ordens válidas na planilha.");
           }
         } catch (err: any) {
           setError(err.message || "Erro ao processar os dados da planilha.");
@@ -412,14 +520,26 @@ const App: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const clearAllData = () => {
-    if (confirm('ATENÇÃO: Isso irá apagar TODAS as informações inseridas. Deseja continuar?')) {
-      setOrders([]);
-      setTechnicians([]);
-      setShutdowns([]);
-      setAssets([]);
-      setError(null);
-      showNotification('Banco de dados resetado.', 'error');
+  const clearAllData = async () => {
+    if (confirm('ATENÇÃO: Isso irá apagar TODAS as informações de programação da nuvem. Deseja continuar?')) {
+      setIsLoading(true);
+      try {
+        const { error: deleteError } = await supabase
+          .from('maintenance_orders')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+
+        if (deleteError) throw deleteError;
+
+        setOrders([]);
+        setError(null);
+        showNotification('Programação limpa com sucesso.', 'error');
+      } catch (err: any) {
+        console.error('Erro ao limpar dados:', err);
+        showNotification('Erro ao limpar dados: ' + err.message, 'error');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
