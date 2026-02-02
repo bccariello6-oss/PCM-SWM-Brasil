@@ -746,41 +746,43 @@ const App: React.FC = () => {
                         activeView}
             </h2>
 
-            <div className="h-10 px-4 bg-slate-100 rounded-xl flex items-center gap-3 border border-slate-200">
-              <CalendarIcon
-                className="w-4 h-4 text-slate-500 cursor-pointer hover:text-blue-600 transition-colors"
-                onClick={() => (document.getElementById('hidden-date-picker') as HTMLInputElement)?.showPicker()}
-              />
-              <input
-                type="date"
-                id="hidden-date-picker"
-                className="sr-only"
-                onChange={(e) => e.target.value && setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
-              />
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <button
-                  className="p-1 hover:bg-slate-200 rounded transition-colors"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setDate(d.getDate() - 7);
-                    setSelectedDate(d);
-                  }}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span>{currentWeekInfo.label}</span>
-                <button
-                  className="p-1 hover:bg-slate-200 rounded transition-colors"
-                  onClick={() => {
-                    const d = new Date(selectedDate);
-                    d.setDate(d.getDate() + 7);
-                    setSelectedDate(d);
-                  }}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+            {['dashboard', 'planning', 'orders'].includes(activeView) && (
+              <div className="h-10 px-4 bg-slate-100 rounded-xl flex items-center gap-3 border border-slate-200">
+                <CalendarIcon
+                  className="w-4 h-4 text-slate-500 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={() => (document.getElementById('hidden-date-picker') as HTMLInputElement)?.showPicker()}
+                />
+                <input
+                  type="date"
+                  id="hidden-date-picker"
+                  className="sr-only"
+                  onChange={(e) => e.target.value && setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
+                />
+                <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <button
+                    className="p-1 hover:bg-slate-200 rounded transition-colors"
+                    onClick={() => {
+                      const d = new Date(selectedDate);
+                      d.setDate(d.getDate() - 7);
+                      setSelectedDate(d);
+                    }}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span>{currentWeekInfo.label}</span>
+                  <button
+                    className="p-1 hover:bg-slate-200 rounded transition-colors"
+                    onClick={() => {
+                      const d = new Date(selectedDate);
+                      d.setDate(d.getDate() + 7);
+                      setSelectedDate(d);
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="flex items-center gap-4">
