@@ -33,7 +33,8 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -717,6 +718,18 @@ const App: React.FC = () => {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setSession(null);
+      showNotification('Sessão encerrada com sucesso.');
+    } catch (err: any) {
+      console.error('Erro ao sair:', err);
+      setError('Erro ao encerrar sessão: ' + err.message);
+    }
+  };
+
   if (!session) {
     return <Auth />;
   }
@@ -871,6 +884,13 @@ const App: React.FC = () => {
                 <p className="text-sm font-bold text-slate-800 leading-tight">Diogo Jesus</p>
                 <p className="text-xs text-slate-500 font-medium">Técnico de PCM</p>
               </div>
+              <button
+                onClick={handleLogout}
+                className="ml-2 p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all group"
+                title="Sair do Aplicativo"
+              >
+                <LogOut className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" />
+              </button>
             </div>
           </div>
         </header>
