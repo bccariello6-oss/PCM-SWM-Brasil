@@ -135,7 +135,8 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
         <div className="flex-1 overflow-y-auto p-8">
           {activeTab === 'details' && (
             <form id="os-form" onSubmit={(e) => handleSubmit(e, true)} className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
+              {/* Row 1: Basic Identifiers */}
+              <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Número da OS</label>
                   <input
@@ -148,24 +149,38 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Tipo de Manutenção</label>
+                  <label className="text-xs font-bold text-slate-500 uppercase">Tipo</label>
                   <select
                     required
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
                     value={formData.type || OSType.PREVENTIVE}
                     onChange={e => setFormData({ ...formData, type: e.target.value as OSType })}
                   >
-                    <option value="" disabled>Selecione o tipo...</option>
+                    <option value="" disabled>Selecione...</option>
                     {Object.values(OSType).map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
+                  <select
+                    className={`w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all font-bold ${formData.status === OSStatus.COMPLETED ? 'text-emerald-600' :
+                        formData.status === OSStatus.EXECUTING ? 'text-blue-600' :
+                          formData.status === OSStatus.REPROGRAMMED ? 'text-orange-600' : 'text-slate-600'
+                      }`}
+                    value={formData.status}
+                    onChange={e => setFormData({ ...formData, status: e.target.value as OSStatus })}
+                  >
+                    {Object.values(OSStatus).map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
               </div>
 
+              {/* Row 2: Description */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-500 uppercase">Descrição da Atividade</label>
                 <textarea
                   required
-                  rows={3}
+                  rows={2}
                   placeholder="Descreva detalhadamente o que será executado..."
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
                   value={formData.description || ''}
@@ -173,111 +188,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase">Atribuição de Equipe</label>
-                  <div className="space-y-4">
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <select
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all text-sm"
-                        value={formData.technicianId || ''}
-                        onChange={e => setFormData({ ...formData, technicianId: e.target.value })}
-                      >
-                        <option value="">Responsável Principal...</option>
-                        {technicians.map(t => <option key={t.id} value={t.id}>{t.name} ({t.discipline})</option>)}
-                      </select>
-                    </div>
-                    <div className="relative">
-                      <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <select
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all text-sm"
-                        value={formData.collaboratorId || ''}
-                        onChange={e => setFormData({ ...formData, collaboratorId: e.target.value })}
-                      >
-                        <option value="">Colaborador / Ajudante...</option>
-                        {technicians.map(t => (
-                          <option
-                            key={t.id}
-                            value={t.id}
-                            disabled={t.id === formData.technicianId}
-                          >
-                            {t.name} ({t.discipline})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Dia da Semana</label>
-                    <select
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
-                      value={formData.scheduledDay}
-                      onChange={e => {
-                        const newDay = e.target.value;
-                        // If we have a scheduledDate, we should update it to match the new day of that week
-                        if (formData.scheduledDate) {
-                          const date = new Date(formData.scheduledDate + 'T12:00:00');
-                          const currentDay = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][date.getDay()];
-                          const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-                          const diff = days.indexOf(newDay) - days.indexOf(currentDay);
-                          date.setDate(date.getDate() + diff);
-                          setFormData({ ...formData, scheduledDay: newDay, scheduledDate: date.toISOString().split('T')[0] });
-                        } else {
-                          setFormData({ ...formData, scheduledDay: newDay });
-                        }
-                      }}
-                    >
-                      {WEEK_DAYS.map(day => <option key={day} value={day}>{day}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Data Planejada</label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
-                      value={formData.scheduledDate || ''}
-                      onChange={e => {
-                        const newDateStr = e.target.value;
-                        const date = new Date(newDateStr + 'T12:00:00');
-                        const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-                        setFormData({ ...formData, scheduledDate: newDateStr, scheduledDay: dayNames[date.getDay()] });
-                      }}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
-                    <select
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all font-bold"
-                      value={formData.status}
-                      onChange={e => setFormData({ ...formData, status: e.target.value as OSStatus })}
-                    >
-                      {Object.values(OSStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {formData.status === OSStatus.REPROGRAMMED && (
-                <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-orange-600" />
-                    <label className="text-xs font-bold text-orange-800 uppercase">Motivo da Reprogramação</label>
-                  </div>
-                  <textarea
-                    required
-                    rows={2}
-                    placeholder="Informe por que esta OS está sendo reprogramada..."
-                    className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all bg-white text-sm"
-                    value={formData.reprogrammingReason || ''}
-                    onChange={e => setFormData({ ...formData, reprogrammingReason: e.target.value })}
-                  />
-                </div>
-              )}
-
+              {/* Row 3: Location */}
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Área Industrial</label>
@@ -303,6 +214,47 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
                 </div>
               </div>
 
+              {/* Row 4: Team Assignment */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Responsável Principal</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <select
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all text-sm"
+                      value={formData.technicianId || ''}
+                      onChange={e => setFormData({ ...formData, technicianId: e.target.value })}
+                    >
+                      <option value="">Selecionar técnico...</option>
+                      {technicians.map(t => <option key={t.id} value={t.id}>{t.name} ({t.discipline})</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Colaborador / Ajudante</label>
+                  <div className="relative">
+                    <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <select
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all text-sm"
+                      value={formData.collaboratorId || ''}
+                      onChange={e => setFormData({ ...formData, collaboratorId: e.target.value })}
+                    >
+                      <option value="">Opcional...</option>
+                      {technicians.map(t => (
+                        <option
+                          key={t.id}
+                          value={t.id}
+                          disabled={t.id === formData.technicianId}
+                        >
+                          {t.name} ({t.discipline})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 5: Discipline, Priority, Hours */}
               <div className="grid grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Disciplina</label>
@@ -340,7 +292,64 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              {/* Row 6: Planning Dates */}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Data Planejada</label>
+                  <input
+                    type="date"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
+                    value={formData.scheduledDate || ''}
+                    onChange={e => {
+                      const newDateStr = e.target.value;
+                      const date = new Date(newDateStr + 'T12:00:00');
+                      const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                      setFormData({ ...formData, scheduledDate: newDateStr, scheduledDay: dayNames[date.getDay()] });
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase">Dia da Semana</label>
+                  <select
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
+                    value={formData.scheduledDay}
+                    onChange={e => {
+                      const newDay = e.target.value;
+                      if (formData.scheduledDate) {
+                        const date = new Date(formData.scheduledDate + 'T12:00:00');
+                        const currentDay = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][date.getDay()];
+                        const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+                        const diff = days.indexOf(newDay) - days.indexOf(currentDay);
+                        date.setDate(date.getDate() + diff);
+                        setFormData({ ...formData, scheduledDay: newDay, scheduledDate: date.toISOString().split('T')[0] });
+                      } else {
+                        setFormData({ ...formData, scheduledDay: newDay });
+                      }
+                    }}
+                  >
+                    {WEEK_DAYS.map(day => <option key={day} value={day}>{day}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {formData.status === OSStatus.REPROGRAMMED && (
+                <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-orange-600" />
+                    <label className="text-xs font-bold text-orange-800 uppercase">Motivo da Reprogramação</label>
+                  </div>
+                  <textarea
+                    required
+                    rows={2}
+                    placeholder="Informe por que esta OS está sendo reprogramada..."
+                    className="w-full px-4 py-3 rounded-xl border border-orange-200 focus:ring-2 focus:ring-orange-500 focus:outline-none transition-all bg-white text-sm"
+                    value={formData.reprogrammingReason || ''}
+                    onChange={e => setFormData({ ...formData, reprogrammingReason: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 italic">
                 <input
                   type="checkbox"
                   id="shutdown"
