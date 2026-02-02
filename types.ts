@@ -52,8 +52,9 @@ export interface MaintenanceOrder {
   operationalShutdown: boolean;
   status: OSStatus;
   technicianId?: string;
-  collaboratorId?: string; 
-  scheduledDay?: string; 
+  collaboratorId?: string;
+  scheduledDay?: string;
+  scheduledDate?: string;
   logs?: LogEntry[];
   attachments?: string[];
   reprogrammingReason?: string;
@@ -90,4 +91,12 @@ export interface WeeklyStats {
   totalHours: number;
   completedOS: number;
   shutdownCount: number;
+}
+
+export interface AppNotification {
+  id: string;
+  message: string;
+  timestamp: string;
+  read: boolean;
+  type: 'info' | 'success' | 'warning' | 'error';
 }

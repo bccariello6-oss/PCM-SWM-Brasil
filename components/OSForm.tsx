@@ -23,6 +23,7 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
     estimatedHours: 1,
     operationalShutdown: false,
     scheduledDay: 'Segunda',
+    scheduledDate: '',
     logs: [],
     attachments: [],
     reprogrammingReason: '',
@@ -213,10 +214,37 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
                     <select
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
                       value={formData.scheduledDay}
-                      onChange={e => setFormData({ ...formData, scheduledDay: e.target.value })}
+                      onChange={e => {
+                        const newDay = e.target.value;
+                        // If we have a scheduledDate, we should update it to match the new day of that week
+                        if (formData.scheduledDate) {
+                          const date = new Date(formData.scheduledDate + 'T12:00:00');
+                          const currentDay = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][date.getDay()];
+                          const days = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+                          const diff = days.indexOf(newDay) - days.indexOf(currentDay);
+                          date.setDate(date.getDate() + diff);
+                          setFormData({ ...formData, scheduledDay: newDay, scheduledDate: date.toISOString().split('T')[0] });
+                        } else {
+                          setFormData({ ...formData, scheduledDay: newDay });
+                        }
+                      }}
                     >
                       {WEEK_DAYS.map(day => <option key={day} value={day}>{day}</option>)}
                     </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Data Planejada</label>
+                    <input
+                      type="date"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
+                      value={formData.scheduledDate || ''}
+                      onChange={e => {
+                        const newDateStr = e.target.value;
+                        const date = new Date(newDateStr + 'T12:00:00');
+                        const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+                        setFormData({ ...formData, scheduledDate: newDateStr, scheduledDay: dayNames[date.getDay()] });
+                      }}
+                    />
                   </div>
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-500 uppercase">Status</label>

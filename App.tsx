@@ -11,7 +11,7 @@ import TeamManagement from './components/TeamManagement';
 import ImportInfoModal from './components/ImportInfoModal';
 import ShutdownManagement from './components/ShutdownManagement';
 import AssetManagement from './components/AssetManagement';
-import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift } from './types';
+import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift, AppNotification } from './types';
 import { mockOS, mockTechnicians, mockShutdowns, mockAssets } from './mockData';
 import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
@@ -61,9 +61,14 @@ const App: React.FC = () => {
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<Asset | undefined>();
 
+  // Notifications State
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+
   // Import Modal State
   const [isImportInfoOpen, setIsImportInfoOpen] = useState(false);
 
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDiscipline, setFilterDiscipline] = useState<string>('All');
   const [filterTechnician, setFilterTechnician] = useState<string>('All');
@@ -134,6 +139,7 @@ const App: React.FC = () => {
         technicianId: o.technician_id,
         collaboratorId: o.collaborator_id,
         scheduledDay: o.scheduled_day,
+        scheduledDate: o.scheduled_date,
         reprogrammingReason: o.reprogramming_reason,
         logs: logsByOrder[o.id] || []
       }));
@@ -197,8 +203,72 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   };
 
+  const addNotification = (message: string, type: AppNotification['type'] = 'info') => {
+    const newNotification: AppNotification = {
+      id: Math.random().toString(36).substr(2, 9),
+      message,
+      timestamp: new Date().toISOString(),
+      read: false,
+      type
+    };
+    setNotifications(prev => [newNotification, ...prev]);
+  };
+
+  const currentWeekInfo = useMemo(() => {
+    const d = new Date(selectedDate);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(d.setDate(diff));
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    // Calculate ISO Week Number
+    const target = new Date(selectedDate);
+    const dayNr = (selectedDate.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const firstThursday = target.getTime();
+    target.setMonth(0, 1);
+    if (target.getDay() !== 4) {
+      target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+    }
+    const weekNumber = 1 + Math.ceil((firstThursday - target.getTime()) / 604800000);
+
+    const formatDate = (date: Date) => {
+      return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    };
+
+    return {
+      weekNumber,
+      start: monday,
+      end: sunday,
+      label: `Semana #${weekNumber.toString().padStart(2, '0')} (${formatDate(monday)} - ${formatDate(sunday)})`
+    };
+  }, [selectedDate]);
+
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
+      // Week filtering
+      if (o.scheduledDate) {
+        const orderDate = new Date(o.scheduledDate + 'T12:00:00');
+        if (orderDate < currentWeekInfo.start || orderDate > currentWeekInfo.end) return false;
+      } else if (o.scheduledDay) {
+        // Fallback for legacy orders: only show them in the REAL current week
+        const today = new Date();
+        const startOfRealWeek = new Date(today);
+        startOfRealWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+        startOfRealWeek.setHours(0, 0, 0, 0);
+
+        const endOfRealWeek = new Date(startOfRealWeek);
+        endOfRealWeek.setDate(startOfRealWeek.getDate() + 6);
+        endOfRealWeek.setHours(23, 59, 59, 999);
+
+        // If the view is NOT the current real week, hide legacy orders
+        if (currentWeekInfo.start.getTime() !== startOfRealWeek.getTime()) return false;
+      }
+
       const tech = technicians.find(t => t.id === o.technicianId);
       const collab = technicians.find(t => t.id === o.collaboratorId);
 
@@ -266,7 +336,7 @@ const App: React.FC = () => {
         technician_id: newOS.technicianId || null,
         collaborator_id: newOS.collaboratorId || null,
         scheduled_day: newOS.scheduledDay || 'Segunda',
-        reprogramming_reason: newOS.reprogrammingReason || null,
+        scheduled_date: newOS.scheduledDate || null,
         updated_at: timestamp
       };
 
@@ -305,6 +375,7 @@ const App: React.FC = () => {
 
         if (updateError) throw updateError;
         showNotification('Ordem de Serviço atualizada com sucesso!');
+        addNotification(`OS #${newOS.osNumber} atualizada por Diogo Jesus`, 'success');
       } else {
         // Garantir que não estamos tentando enviar um ID temporário/inválido
         const { id, ...insertPayload } = osPayload as any;
@@ -326,6 +397,7 @@ const App: React.FC = () => {
         });
 
         showNotification('Nova OS criada com sucesso!');
+        addNotification(`Nova OS #${insertPayload.os_number} criada por Diogo Jesus`, 'success');
       }
 
       // Inserir logs se houver
@@ -368,10 +440,17 @@ const App: React.FC = () => {
   };
 
   const handleQuickAddOrder = (techId: string, day: string) => {
+    const dayIndex = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].indexOf(day);
+    const scheduledDate = new Date(currentWeekInfo.start);
+    scheduledDate.setDate(scheduledDate.getDate() + dayIndex);
+
     setSelectedOS({
       technicianId: techId,
       scheduledDay: day,
+      scheduledDate: scheduledDate.toISOString().split('T')[0],
       status: OSStatus.PLANNED,
+      type: OSType.PREVENTIVE,
+      priority: 'Média',
       discipline: technicians.find(t => t.id === techId)?.discipline || Discipline.MECHANICS
     });
     setIsOSModalOpen(true);
@@ -410,6 +489,7 @@ const App: React.FC = () => {
           if (fallbackError) throw fallbackError;
         }
         showNotification('Técnico atualizado com sucesso!');
+        addNotification(`Técnico ${techData.name} atualizado no sistema`, 'info');
       } else {
         const { error } = await supabase
           .from('técnicos')
@@ -422,6 +502,7 @@ const App: React.FC = () => {
           if (fallbackError) throw fallbackError;
         }
         showNotification('Novo técnico cadastrado com sucesso!');
+        addNotification(`Novo técnico ${techData.name} cadastrado`, 'success');
       }
       await fetchTechnicians();
       setIsTechModalOpen(false);
@@ -452,6 +533,7 @@ const App: React.FC = () => {
 
         await fetchTechnicians();
         showNotification('Técnico removido do sistema.', 'error');
+        addNotification(`Técnico removido do sistema`, 'warning');
       } catch (err: any) {
         console.error('Erro ao excluir técnico:', err);
         showNotification('Erro ao excluir técnico: ' + err.message, 'error');
@@ -507,6 +589,25 @@ const App: React.FC = () => {
             const osNumber = String(row['OS'] || row['Número'] || row['osNumber'] || '');
             if (!osNumber) return null;
 
+            const scheduledDay = String(row['Dia'] || row['Day'] || 'Segunda');
+            let scheduledDate = row['Data'] || row['Date'] || null;
+
+            if (!scheduledDate) {
+              // Try to calculate date from day name using current viewed week
+              const dayIndex = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].indexOf(scheduledDay);
+              if (dayIndex !== -1) {
+                const calculatedDate = new Date(currentWeekInfo.start);
+                calculatedDate.setDate(calculatedDate.getDate() + dayIndex);
+                scheduledDate = calculatedDate.toISOString().split('T')[0];
+              }
+            } else if (typeof scheduledDate === 'number') {
+              // Handle Excel date serialization (days since 1900)
+              const date = new Date((scheduledDate - (25567 + 1)) * 86400 * 1000);
+              scheduledDate = date.toISOString().split('T')[0];
+            } else if (scheduledDate instanceof Date) {
+              scheduledDate = scheduledDate.toISOString().split('T')[0];
+            }
+
             return {
               os_number: osNumber,
               type: (row['Tipo'] || OSType.PREVENTIVE) as OSType,
@@ -520,7 +621,8 @@ const App: React.FC = () => {
               status: OSStatus.PLANNED,
               technician_id: technicians.find(t => t.name.toLowerCase() === String(row['Técnico'] || '').toLowerCase())?.id || null,
               collaborator_id: technicians.find(t => t.name.toLowerCase() === String(row['Colaborador'] || '').toLowerCase())?.id || null,
-              scheduled_day: String(row['Dia'] || 'Segunda'),
+              scheduled_day: scheduledDay,
+              scheduled_date: scheduledDate,
               created_at: timestamp,
               updated_at: timestamp
             };
@@ -536,6 +638,7 @@ const App: React.FC = () => {
             await fetchOrders();
             setIsLoading(false);
             showNotification(`${ordersToInsert.length} ordens importadas e sincronizadas com sucesso!`);
+            addNotification(`${ordersToInsert.length} ordens importadas via Excel`, 'success');
           } else {
             throw new Error("Não foram encontradas ordens válidas na planilha.");
           }
@@ -570,6 +673,7 @@ const App: React.FC = () => {
         setOrders([]);
         setError(null);
         showNotification('Programação limpa com sucesso.', 'error');
+        addNotification('Todo o banco de dados foi limpo pelo usuário', 'error');
       } catch (err: any) {
         console.error('Erro ao limpar dados:', err);
         showNotification('Erro ao limpar dados: ' + err.message, 'error');
@@ -609,11 +713,38 @@ const App: React.FC = () => {
             </h2>
 
             <div className="h-10 px-4 bg-slate-100 rounded-xl flex items-center gap-3 border border-slate-200">
-              <CalendarIcon className="w-4 h-4 text-slate-500" />
+              <CalendarIcon
+                className="w-4 h-4 text-slate-500 cursor-pointer hover:text-blue-600 transition-colors"
+                onClick={() => (document.getElementById('hidden-date-picker') as HTMLInputElement)?.showPicker()}
+              />
+              <input
+                type="date"
+                id="hidden-date-picker"
+                className="sr-only"
+                onChange={(e) => e.target.value && setSelectedDate(new Date(e.target.value + 'T12:00:00'))}
+              />
               <div className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                <button className="p-1 hover:bg-slate-200 rounded transition-colors"><ChevronLeft className="w-4 h-4" /></button>
-                <span>Semana #04 (19/01 - 25/01)</span>
-                <button className="p-1 hover:bg-slate-200 rounded transition-colors"><ChevronRight className="w-4 h-4" /></button>
+                <button
+                  className="p-1 hover:bg-slate-200 rounded transition-colors"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setDate(d.getDate() - 7);
+                    setSelectedDate(d);
+                  }}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span>{currentWeekInfo.label}</span>
+                <button
+                  className="p-1 hover:bg-slate-200 rounded transition-colors"
+                  onClick={() => {
+                    const d = new Date(selectedDate);
+                    d.setDate(d.getDate() + 7);
+                    setSelectedDate(d);
+                  }}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -638,10 +769,59 @@ const App: React.FC = () => {
               <Database className="w-5 h-5" />
             </button>
 
-            <button className="p-2 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setIsNotificationsOpen(!isNotificationsOpen);
+                  if (!isNotificationsOpen) {
+                    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+                  }
+                }}
+                className={`p-2 rounded-xl transition-colors relative ${isNotificationsOpen ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+              >
+                <Bell className="w-5 h-5" />
+                {notifications.some(n => !n.read) && (
+                  <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white animate-pulse"></span>
+                )}
+              </button>
+
+              {isNotificationsOpen && (
+                <div className="absolute right-0 mt-3 w-80 bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 className="font-bold text-slate-800">Notificações</h3>
+                    <button
+                      onClick={() => setNotifications([])}
+                      className="text-[10px] font-black uppercase text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      Limpar Tudo
+                    </button>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto">
+                    {notifications.length > 0 ? (
+                      notifications.map(n => (
+                        <div key={n.id} className="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                          <div className="flex gap-3">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === 'success' ? 'bg-emerald-500' :
+                              n.type === 'error' ? 'bg-red-500' :
+                                n.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
+                              }`} />
+                            <div>
+                              <p className="text-sm text-slate-700 leading-tight mb-1">{n.message}</p>
+                              <span className="text-[10px] font-bold text-slate-400">{new Date(n.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-10 text-center text-slate-400">
+                        <Bell className="w-8 h-8 mx-auto mb-2 opacity-10" />
+                        <p className="text-xs font-medium">Nenhuma notificação por enquanto.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
@@ -726,7 +906,12 @@ const App: React.FC = () => {
 
                     <button
                       onClick={() => {
-                        setSelectedOS(undefined);
+                        const defaultDate = currentWeekInfo.start.toISOString().split('T')[0];
+                        setSelectedOS({
+                          scheduledDate: defaultDate,
+                          scheduledDay: 'Segunda',
+                          status: OSStatus.PLANNED
+                        });
                         setIsOSModalOpen(true);
                       }}
                       className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
