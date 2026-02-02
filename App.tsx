@@ -1,6 +1,6 @@
-
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
+import WeeklyHistory from './components/WeeklyHistory';
 import Dashboard from './components/Dashboard';
 import WeeklyGrid from './components/WeeklyGrid';
 import OSForm from './components/OSForm';
@@ -42,6 +42,7 @@ const App: React.FC = () => {
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [shutdowns, setShutdowns] = useState<OperationalShutdown[]>(mockShutdowns);
   const [assets, setAssets] = useState<Asset[]>(mockAssets);
+  const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
   const [session, setSession] = useState<any>(null);
 
   // UX States
@@ -144,6 +145,7 @@ const App: React.FC = () => {
         logs: logsByOrder[o.id] || []
       }));
 
+      setAllLogs(logsData || []);
       setOrders(formattedOrders);
     } catch (err: any) {
       console.error('Erro ao buscar ordens:', err);
@@ -322,9 +324,13 @@ const App: React.FC = () => {
       let targetId = newOS.id || selectedOS?.id;
       const logsToInsert: any[] = [];
 
+      // Garantia absoluta contra nulos no campo 'type' (Multi-camadas: state, enum e fallback string)
+      const rawType = newOS.type || (selectedOS && selectedOS.type);
+      const finalType = (rawType && (rawType as any) !== 'null') ? String(rawType) : OSType.PREVENTIVE;
+
       osPayload = {
-        os_number: newOS.osNumber || '000000',
-        type: newOS.type || OSType.PREVENTIVE || 'Preventiva',
+        os_number: String(newOS.osNumber || '000000'),
+        type: finalType,
         area: newOS.area || '',
         tag: newOS.tag || '',
         description: newOS.description || '',
@@ -451,6 +457,11 @@ const App: React.FC = () => {
       status: OSStatus.PLANNED,
       type: OSType.PREVENTIVE,
       priority: 'Média',
+      estimatedHours: 1,
+      operationalShutdown: false,
+      logs: [],
+      attachments: [],
+      reprogrammingReason: '',
       discipline: technicians.find(t => t.id === techId)?.discipline || Discipline.MECHANICS
     });
     setIsOSModalOpen(true);
@@ -709,7 +720,8 @@ const App: React.FC = () => {
                   activeView === 'teams' ? 'Equipes & Turnos' :
                     activeView === 'shutdowns' ? 'Paradas Operacionais' :
                       activeView === 'assets' ? 'Gestão de Ativos' :
-                        activeView}
+                        activeView === 'history' ? 'Histórico da Semana' :
+                          activeView}
             </h2>
 
             <div className="h-10 px-4 bg-slate-100 rounded-xl flex items-center gap-3 border border-slate-200">
@@ -863,7 +875,7 @@ const App: React.FC = () => {
             </div>
           ) : (
             <>
-              {activeView === 'dashboard' && <Dashboard orders={orders} technicians={technicians} />}
+              {activeView === 'dashboard' && <Dashboard orders={filteredOrders} technicians={technicians} />}
 
               {activeView === 'planning' && (
                 <div className="space-y-6">
@@ -910,7 +922,10 @@ const App: React.FC = () => {
                         setSelectedOS({
                           scheduledDate: defaultDate,
                           scheduledDay: 'Segunda',
-                          status: OSStatus.PLANNED
+                          status: OSStatus.PLANNED,
+                          type: OSType.PREVENTIVE,
+                          priority: 'Média',
+                          discipline: Discipline.MECHANICS
                         });
                         setIsOSModalOpen(true);
                       }}
@@ -1009,6 +1024,14 @@ const App: React.FC = () => {
                     setSelectedAsset(undefined);
                     setIsAssetModalOpen(true);
                   }}
+                />
+              )}
+
+              {activeView === 'history' && (
+                <WeeklyHistory
+                  logs={allLogs}
+                  orders={orders}
+                  weekRange={currentWeekInfo}
                 />
               )}
             </>

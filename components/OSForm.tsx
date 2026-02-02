@@ -150,10 +150,12 @@ const OSForm: React.FC<OSFormProps> = ({ os, technicians, onClose, onSave }) => 
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-500 uppercase">Tipo de Manutenção</label>
                   <select
+                    required
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition-all"
-                    value={formData.type}
+                    value={formData.type || OSType.PREVENTIVE}
                     onChange={e => setFormData({ ...formData, type: e.target.value as OSType })}
                   >
+                    <option value="" disabled>Selecione o tipo...</option>
                     {Object.values(OSType).map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </div>

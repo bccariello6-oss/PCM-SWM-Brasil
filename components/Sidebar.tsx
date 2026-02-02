@@ -1,13 +1,14 @@
 
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  CalendarDays, 
-  ClipboardList, 
-  Users, 
-  AlertTriangle, 
+import {
+  LayoutDashboard,
+  CalendarDays,
+  ClipboardList,
+  Users,
+  AlertTriangle,
   Settings,
-  Factory
+  Factory,
+  History as HistoryIcon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
     { id: 'teams', label: 'Equipes & Turnos', icon: Users },
     { id: 'shutdowns', label: 'Paradas', icon: AlertTriangle },
     { id: 'assets', label: 'Ativos & Áreas', icon: Factory },
+    { id: 'history', label: 'Histórico Semanal', icon: HistoryIcon },
   ];
 
   return (
@@ -45,11 +47,10 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${
-                isActive 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-                  : 'hover:bg-slate-800 hover:text-white'
-              }`}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group ${isActive
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                : 'hover:bg-slate-800 hover:text-white'
+                }`}
             >
               <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`} />
               <span className="font-medium text-sm">{item.label}</span>
