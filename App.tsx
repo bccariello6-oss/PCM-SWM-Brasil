@@ -797,13 +797,15 @@ const App: React.FC = () => {
               </div>
             )}
 
-            <button
-              onClick={clearAllData}
-              className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"
-              title="Limpar Banco de Dados"
-            >
-              <Database className="w-5 h-5" />
-            </button>
+            {activeView === 'planning' && (
+              <button
+                onClick={clearAllData}
+                className="p-2 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-colors"
+                title="Limpar Banco de Dados"
+              >
+                <Database className="w-5 h-5" />
+              </button>
+            )}
 
             <div className="relative">
               <button
