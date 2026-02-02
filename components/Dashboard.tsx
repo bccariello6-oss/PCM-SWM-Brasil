@@ -1,24 +1,24 @@
 
 import React from 'react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
   Cell,
   PieChart,
   Pie,
   LineChart,
   Line
 } from 'recharts';
-import { MaintenanceOrder, Discipline, OSStatus, Technician } from '../types';
+import { MaintenanceOrder, Discipline, OSStatus, Technician, LogEntry } from '../types';
 import { DISCIPLINE_COLORS, WEEK_DAYS } from '../constants';
-import { 
-  ClipboardCheck, 
-  Clock, 
+import {
+  ClipboardCheck,
+  Clock,
   CheckCircle2,
   AlertCircle,
   History,
@@ -30,12 +30,14 @@ import {
 interface DashboardProps {
   orders: MaintenanceOrder[];
   technicians: Technician[];
+  logs: LogEntry[];
+  weekRange: { start: Date; end: Date };
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ orders, technicians }) => {
+const Dashboard: React.FC<DashboardProps> = ({ orders, technicians, logs, weekRange }) => {
   const pendingOrders = orders.filter(o => o.status !== OSStatus.COMPLETED);
   const totalPlannedHours = orders.reduce((acc, o) => acc + o.estimatedHours, 0);
-  
+
   const backlogHours = pendingOrders.reduce((acc, o) => acc + o.estimatedHours, 0);
   const techCount = technicians?.length || 0;
   const totalCapacity = techCount * 44; // 44h per tech
@@ -89,6 +91,11 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, technicians }) => {
 
   const criticalDays = dailyLoadData.filter(d => d.horas > d.limite && d.limite > 0);
 
+  const weeklyLogs = logs.filter(log => {
+    const logDate = new Date(log.timestamp);
+    return logDate >= weekRange.start && logDate <= weekRange.end;
+  }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
   return (
     <div className="h-full flex flex-col space-y-4 max-h-[calc(100vh-160px)]">
       {/* Metrics Row */}
@@ -134,7 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, technicians }) => {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                    <Tooltip 
+                    <Tooltip
                       cursor={{ fill: '#f8fafc' }}
                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }}
                     />
@@ -193,7 +200,7 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, technicians }) => {
               <AlertCircle className="w-5 h-5 text-amber-500" />
               <h3 className="text-white font-bold text-sm uppercase tracking-wider">Gargalos Detectados</h3>
             </div>
-            
+
             <div className="flex-1 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
               {techOverloads.length === 0 && criticalDays.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-500 py-4">
@@ -227,23 +234,54 @@ const Dashboard: React.FC<DashboardProps> = ({ orders, technicians }) => {
             </div>
           </div>
 
-          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col min-h-[200px]">
-            <h3 className="text-sm font-bold text-slate-800 mb-2">Por Área</h3>
-            <div className="flex-1">
-              {areaData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={areaData} layout="vertical" margin={{ left: -20, top: 0, right: 10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={80} axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#94a3b8', fontWeight: 500 }} />
-                    <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', fontSize: '10px' }} />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} barSize={12} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-200">
-                   <p className="text-[10px] font-bold uppercase tracking-widest">Aguardando dados</p>
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex-1 flex flex-col min-h-[250px] overflow-hidden">
+            <div className="flex items-center gap-2 mb-4">
+              <History className="w-5 h-5 text-blue-600" />
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Histórico de Atividade</h3>
+                <p className="text-[10px] text-slate-500 font-medium">Movimentação da semana</p>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
+              {weeklyLogs.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 py-10">
+                  <History className="w-10 h-10 mb-2 opacity-10" />
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-center">Nenhuma atividade registrada<br />nesta semana</p>
                 </div>
+              ) : (
+                weeklyLogs.map(log => {
+                  const order = orders.find(o => o.id === (log as any).order_id || (log as any).orderId);
+                  return (
+                    <div key={log.id} className="p-3 bg-slate-50 border border-slate-100 rounded-xl hover:shadow-sm transition-all group">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-[10px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                          {log.action}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400">
+                          {new Date(log.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+
+                      {order && (
+                        <p className="text-[9px] text-blue-600 font-black uppercase mb-1"># {order.osNumber}</p>
+                      )}
+
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-[7px] font-bold text-blue-600">
+                            {(log.userName || '??').substring(0, 2).toUpperCase()}
+                          </div>
+                          <span className="text-[9px] text-slate-500 font-medium">{log.userName || 'Sistema'}</span>
+                        </div>
+                        {log.field && (
+                          <span className="text-[8px] bg-slate-200 text-slate-500 px-1 py-0.5 rounded font-black uppercase">{log.field}</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })
               )}
             </div>
           </div>

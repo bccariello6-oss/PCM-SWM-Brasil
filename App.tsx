@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
-import WeeklyHistory from './components/WeeklyHistory';
 import Dashboard from './components/Dashboard';
 import WeeklyGrid from './components/WeeklyGrid';
 import OSForm from './components/OSForm';
@@ -720,8 +719,7 @@ const App: React.FC = () => {
                   activeView === 'teams' ? 'Equipes & Turnos' :
                     activeView === 'shutdowns' ? 'Paradas Operacionais' :
                       activeView === 'assets' ? 'Gestão de Ativos' :
-                        activeView === 'history' ? 'Histórico da Semana' :
-                          activeView}
+                        activeView}
             </h2>
 
             <div className="h-10 px-4 bg-slate-100 rounded-xl flex items-center gap-3 border border-slate-200">
@@ -875,7 +873,14 @@ const App: React.FC = () => {
             </div>
           ) : (
             <>
-              {activeView === 'dashboard' && <Dashboard orders={filteredOrders} technicians={technicians} />}
+              {activeView === 'dashboard' && (
+                <Dashboard
+                  orders={filteredOrders}
+                  technicians={technicians}
+                  logs={allLogs}
+                  weekRange={currentWeekInfo}
+                />
+              )}
 
               {activeView === 'planning' && (
                 <div className="space-y-6">
@@ -1024,14 +1029,6 @@ const App: React.FC = () => {
                     setSelectedAsset(undefined);
                     setIsAssetModalOpen(true);
                   }}
-                />
-              )}
-
-              {activeView === 'history' && (
-                <WeeklyHistory
-                  logs={allLogs}
-                  orders={orders}
-                  weekRange={currentWeekInfo}
                 />
               )}
             </>
