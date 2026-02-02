@@ -711,7 +711,7 @@ const App: React.FC = () => {
         />
 
         {/* Header */}
-        <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-10 shrink-0">
+        <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between sticky top-0 z-40 shrink-0">
           <div className="flex items-center gap-6">
             <h2 className="text-xl font-bold text-slate-800 capitalize">
               {activeView === 'planning' ? 'Programação Semanal' :
