@@ -18,7 +18,24 @@ export const exportToPDF = async (elementId: string, fileName: string = 'program
             scale: 2,
             useCORS: true,
             logging: false,
-            backgroundColor: '#f8fafc' // slate-50 mismatch
+            backgroundColor: '#f8fafc',
+            onclone: (clonedDoc) => {
+                const clonedElement = clonedDoc.getElementById(elementId);
+                if (clonedElement) {
+                    // Remove fixed height and overflow restrictions to capture all content
+                    clonedElement.style.height = 'auto';
+                    clonedElement.style.maxHeight = 'none';
+                    clonedElement.style.overflow = 'visible';
+
+                    // Also find the scrollable body of the grid
+                    const scrollableBody = clonedElement.querySelector('.overflow-y-auto');
+                    if (scrollableBody) {
+                        (scrollableBody as HTMLElement).style.height = 'auto';
+                        (scrollableBody as HTMLElement).style.maxHeight = 'none';
+                        (scrollableBody as HTMLElement).style.overflow = 'visible';
+                    }
+                }
+            }
         });
 
         // Restore buttons
@@ -33,9 +50,27 @@ export const exportToPDF = async (elementId: string, fileName: string = 'program
 
         const imgProps = pdf.getImageProperties(imgData);
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+        const pdfHeight = pdf.internal.pageSize.getHeight();
 
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        // Calculate dimensions to fit width
+        const imgWidth = pdfWidth;
+        const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        // Add first page
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+
+        // Add subsequent pages if content is taller than one page
+        while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pdfHeight;
+        }
+
         pdf.save(fileName);
     } catch (error) {
         console.error('Error generating PDF:', error);
