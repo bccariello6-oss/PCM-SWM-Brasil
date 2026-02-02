@@ -100,3 +100,14 @@ export interface AppNotification {
   read: boolean;
   type: 'info' | 'success' | 'warning' | 'error';
 }
+
+export interface OrderFilters {
+  discipline: string;
+  technicianId: string;
+  priority: string;
+  status: string;
+  searchTerm: string;
+  operationalShutdown: boolean | 'All';
+  area: string;
+}
+

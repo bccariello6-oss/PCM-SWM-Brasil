@@ -10,8 +10,10 @@ import TeamManagement from './components/TeamManagement';
 import ImportInfoModal from './components/ImportInfoModal';
 import ShutdownManagement from './components/ShutdownManagement';
 import AssetManagement from './components/AssetManagement';
-import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift, AppNotification } from './types';
+import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift, AppNotification, OrderFilters } from './types';
 import { mockOS, mockTechnicians, mockShutdowns, mockAssets } from './mockData';
+import AdvancedFilters from './components/AdvancedFilters';
+import { exportToPDF } from './utils/pdfUtils';
 import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
 import {
@@ -44,6 +46,18 @@ const App: React.FC = () => {
   const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
   const [session, setSession] = useState<any>(null);
 
+  // Advanced Filtering State
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [filters, setFilters] = useState<OrderFilters>({
+    discipline: 'All',
+    technicianId: 'All',
+    priority: 'All',
+    status: 'All',
+    searchTerm: '',
+    operationalShutdown: 'All',
+    area: ''
+  });
+
   // UX States
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,9 +83,6 @@ const App: React.FC = () => {
   const [isImportInfoOpen, setIsImportInfoOpen] = useState(false);
 
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterDiscipline, setFilterDiscipline] = useState<string>('All');
-  const [filterTechnician, setFilterTechnician] = useState<string>('All');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Supabase Session effect
@@ -250,66 +261,79 @@ const App: React.FC = () => {
   }, [selectedDate]);
 
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      // Week filtering
-      if (o.scheduledDate) {
-        const orderDate = new Date(o.scheduledDate + 'T12:00:00');
-        if (orderDate < currentWeekInfo.start || orderDate > currentWeekInfo.end) return false;
-      } else if (o.scheduledDay) {
-        // Fallback for legacy orders: only show them in the REAL current week
+    return orders.filter(order => {
+      // 1. Week Filter
+      const orderDate = order.scheduledDate ? new Date(order.scheduledDate + 'T12:00:00') : null;
+      const isInWeek = orderDate && orderDate >= currentWeekInfo.start && orderDate <= currentWeekInfo.end;
+
+      // Legacy day-based orders logic
+      let matchesLegacyWeek = false;
+      if (!order.scheduledDate && order.scheduledDay) {
         const today = new Date();
         const startOfRealWeek = new Date(today);
         startOfRealWeek.setDate(today.getDate() - ((today.getDay() + 6) % 7));
         startOfRealWeek.setHours(0, 0, 0, 0);
-
-        const endOfRealWeek = new Date(startOfRealWeek);
-        endOfRealWeek.setDate(startOfRealWeek.getDate() + 6);
-        endOfRealWeek.setHours(23, 59, 59, 999);
-
-        // If the view is NOT the current real week, hide legacy orders
-        if (currentWeekInfo.start.getTime() !== startOfRealWeek.getTime()) return false;
+        matchesLegacyWeek = currentWeekInfo.start.getTime() === startOfRealWeek.getTime();
       }
 
-      const tech = technicians.find(t => t.id === o.technicianId);
-      const collab = technicians.find(t => t.id === o.collaboratorId);
+      if (!isInWeek && !matchesLegacyWeek) return false;
 
-      const searchableContent = [
-        o.osNumber,
-        o.description,
-        o.tag,
-        o.area,
-        o.discipline,
-        o.type,
-        tech?.name || '',
-        collab?.name || ''
-      ].join(' ').toLowerCase();
+      // 2. Discipline Filter
+      if (filters.discipline !== 'All' && order.discipline !== filters.discipline) return false;
 
-      const matchesSearch = searchableContent.includes(searchTerm.toLowerCase());
-      const matchesDiscipline = filterDiscipline === 'All' || o.discipline === filterDiscipline;
+      // 3. Technician Filter
+      if (filters.technicianId !== 'All' &&
+        order.technicianId !== filters.technicianId &&
+        order.collaboratorId !== filters.technicianId) return false;
 
-      const matchesTechnician = filterTechnician === 'All' ||
-        o.technicianId === filterTechnician ||
-        o.collaboratorId === filterTechnician;
+      // 4. Priority Filter
+      if (filters.priority !== 'All' && order.priority !== filters.priority) return false;
 
-      return matchesSearch && matchesDiscipline && matchesTechnician;
+      // 5. Status Filter
+      if (filters.status !== 'All' && order.status !== filters.status) return false;
+
+      // 6. Operational Shutdown Filter
+      if (filters.operationalShutdown !== 'All' && order.operationalShutdown !== filters.operationalShutdown) return false;
+
+      // 7. Area Filter
+      if (filters.area && !order.area.toLowerCase().includes(filters.area.toLowerCase())) return false;
+
+      // 8. Global Search Term
+      const search = filters.searchTerm.toLowerCase();
+      if (search && !order.osNumber.toLowerCase().includes(search) &&
+        !order.description.toLowerCase().includes(search) &&
+        !order.tag.toLowerCase().includes(search)) return false;
+
+      return true;
     });
-  }, [orders, searchTerm, filterDiscipline, filterTechnician, technicians]);
+  }, [orders, currentWeekInfo, filters]);
 
   const filteredTechnicians = useMemo(() => {
-    if (!searchTerm && filterDiscipline === 'All' && filterTechnician === 'All') return technicians;
-    const term = searchTerm.toLowerCase();
+    // If no specific technician or discipline filter is applied, and no global search term, return all technicians.
+    // The `hasFilteredOrders` check is still relevant if we want to show technicians who have orders matching other filters.
+    const hasActiveOrderFilters = filters.discipline !== 'All' || filters.technicianId !== 'All' || filters.priority !== 'All' || filters.status !== 'All' || filters.area !== '' || filters.searchTerm !== '';
+
+    if (!hasActiveOrderFilters) {
+      return technicians;
+    }
+
+    const term = filters.searchTerm.toLowerCase();
     return technicians.filter(t => {
       const matchesName = t.name.toLowerCase().includes(term);
       const matchesTechDiscipline = t.discipline.toLowerCase().includes(term);
       const matchesShift = t.shift.toLowerCase().includes(term);
+
+      // Check if this technician has any orders that pass the *current* filteredOrders criteria
       const hasFilteredOrders = filteredOrders.some(o => o.technicianId === t.id || o.collaboratorId === t.id);
-      const matchesFilterDiscipline = filterDiscipline === 'All' || t.discipline === filterDiscipline;
-      const matchesFilterTechnician = filterTechnician === 'All' || t.id === filterTechnician;
+
+      const matchesFilterDiscipline = filters.discipline === 'All' || t.discipline === filters.discipline;
+      const matchesFilterTechnician = filters.technicianId === 'All' || t.id === filters.technicianId;
+
       return (matchesName || matchesTechDiscipline || matchesShift || hasFilteredOrders) &&
         matchesFilterDiscipline &&
         matchesFilterTechnician;
     });
-  }, [technicians, searchTerm, filteredOrders, filterDiscipline, filterTechnician]);
+  }, [technicians, filteredOrders, filters]);
 
   const handleSaveOS = async (newOS: MaintenanceOrder, shouldClose: boolean = true) => {
     const timestamp = new Date().toISOString();
@@ -767,8 +791,8 @@ const App: React.FC = () => {
                   type="text"
                   placeholder="Buscar OS, TAG, Técnico..."
                   className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-64"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
+                  value={filters.searchTerm}
+                  onChange={e => setFilters({ ...filters, searchTerm: e.target.value })}
                 />
               </div>
             )}
@@ -885,13 +909,13 @@ const App: React.FC = () => {
               )}
 
               {activeView === 'planning' && (
-                <div className="space-y-6">
+                <div className="space-y-6" id="planning-container">
                   <div className="flex justify-between items-center">
                     <div className="flex gap-2">
                       <select
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none min-w-[160px]"
-                        value={filterDiscipline}
-                        onChange={e => setFilterDiscipline(e.target.value)}
+                        value={filters.discipline}
+                        onChange={e => setFilters({ ...filters, discipline: e.target.value as Discipline })}
                       >
                         <option value="All">Todas Disciplinas</option>
                         {Object.values(Discipline).map(d => <option key={d} value={d}>{d}</option>)}
@@ -899,18 +923,24 @@ const App: React.FC = () => {
 
                       <select
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none min-w-[180px]"
-                        value={filterTechnician}
-                        onChange={e => setFilterTechnician(e.target.value)}
+                        value={filters.technicianId}
+                        onChange={e => setFilters({ ...filters, technicianId: e.target.value })}
                       >
                         <option value="All">Todos Técnicos</option>
                         {technicians.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
 
-                      <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">
+                      <button
+                        onClick={() => setIsFilterPanelOpen(true)}
+                        className={`flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors ${Object.values(filters).some(v => v !== 'All' && v !== '' && v !== false) ? 'border-blue-500 text-blue-600' : ''}`}
+                      >
                         <Filter className="w-4 h-4" />
                         Mais Filtros
                       </button>
-                      <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50">
+                      <button
+                        onClick={() => exportToPDF('planning-container', `programacao-semana-${currentWeekInfo.weekNumber}.pdf`)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors"
+                      >
                         <FileDown className="w-4 h-4" />
                         Exportar PDF
                       </button>
@@ -976,8 +1006,8 @@ const App: React.FC = () => {
                       </div>
                       <select
                         className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none"
-                        value={filterDiscipline}
-                        onChange={e => setFilterDiscipline(e.target.value)}
+                        value={filters.discipline}
+                        onChange={e => setFilters({ ...filters, discipline: e.target.value })}
                       >
                         <option value="All">Todas Disciplinas</option>
                         {Object.values(Discipline).map(d => <option key={d} value={d}>{d}</option>)}
@@ -1037,6 +1067,23 @@ const App: React.FC = () => {
           )}
         </div>
       </main>
+
+      <AdvancedFilters
+        isOpen={isFilterPanelOpen}
+        onClose={() => setIsFilterPanelOpen(false)}
+        filters={filters}
+        setFilters={setFilters}
+        technicians={technicians}
+        onClear={() => setFilters({
+          discipline: 'All',
+          technicianId: 'All',
+          priority: 'All',
+          status: 'All',
+          searchTerm: '',
+          operationalShutdown: 'All',
+          area: ''
+        })}
+      />
 
       {/* Refined Toast Notification System */}
       {toast && (
