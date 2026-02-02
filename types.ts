@@ -113,3 +113,11 @@ export interface OrderFilters {
   area: string;
 }
 
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  role: string;
+  email: string;
+}
+
+

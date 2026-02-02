@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
 import { supabase, IS_MOCK_MODE } from '../supabaseClient';
-import { LogIn, Mail, Lock, Loader2, AlertCircle, ShieldAlert, ArrowRight, Settings, BarChart3, Clock } from 'lucide-react';
+import { LogIn, Mail, Lock, Loader2, AlertCircle, ShieldAlert, ArrowRight, Settings, BarChart3, Clock, User, Briefcase, UserPlus } from 'lucide-react';
 
 const Auth: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [mode, setMode] = useState<'signin' | 'signup'>('signin');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [fullName, setFullName] = useState('');
+    const [role, setRole] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [message, setMessage] = useState<string | null>(null);
+
+    const getErrorMessage = (msg: string) => {
+        if (msg.includes('Invalid login credentials')) return 'E-mail ou senha incorretos. Verifique seus dados.';
+        if (msg.includes('Email not confirmed')) return 'E-mail não confirmado. Verifique sua caixa de entrada (e spam).';
+        if (msg.includes('User already registered')) return 'Este e-mail já possui cadastro. Tente entrar.';
+        if (msg.includes('Password should be at least 6 characters')) return 'A senha deve ter no mínimo 6 caracteres.';
+        return msg;
+    };
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -18,13 +28,44 @@ const Auth: React.FC = () => {
 
         try {
             if (mode === 'signup') {
-                const { error: signUpError } = await supabase.auth.signUp({
+                const { data: authData, error: signUpError } = await supabase.auth.signUp({
                     email,
                     password,
+                    options: {
+                        data: {
+                            full_name: fullName,
+                            role: role
+                        }
+                    }
                 });
                 if (signUpError) throw signUpError;
-                setMessage('Conta simulada pronta! Agora você já pode entrar.');
-                setMode('signin');
+
+                if (authData.user) {
+                    // Create profile in the 'profiles' table
+                    const { error: profileError } = await supabase
+                        .from('profiles')
+                        .insert([
+                            {
+                                id: authData.user.id,
+                                full_name: fullName,
+                                role: role,
+                                email: email
+                            }
+                        ]);
+
+                    if (profileError) {
+                        console.error('Erro ao criar perfil:', profileError);
+                        // Even if profile fails, we shouldn't necessarily block the user, 
+                        // but we should inform them.
+                    }
+                }
+
+                if (authData.session) {
+                    setMessage('Cadastro realizado com sucesso! Bem-vindo.');
+                } else {
+                    setMessage('Cadastro realizado! Verifique seu e-mail para confirmar a conta.');
+                    setMode('signin');
+                }
             } else {
                 const { error: signInError } = await supabase.auth.signInWithPassword({
                     email,
@@ -33,7 +74,7 @@ const Auth: React.FC = () => {
                 if (signInError) throw signInError;
             }
         } catch (err: any) {
-            setError(err.message || 'Ocorreu um erro na autenticação');
+            setError(getErrorMessage(err.message || 'Ocorreu um erro na autenticação'));
         } finally {
             setLoading(false);
         }
@@ -83,7 +124,7 @@ const Auth: React.FC = () => {
                                 <AlertCircle className="w-5 h-5 shrink-0" />
                                 <div className="flex flex-col gap-1">
                                     <span className="font-bold">{error}</span>
-                                    {!IS_MOCK_MODE && error.includes('inválidas') && (
+                                    {!IS_MOCK_MODE && error.includes('incorretos') && (
                                         <span className="text-[10px] opacity-70">Utilize o <b>Novo Cadastro</b> se for seu primeiro acesso.</span>
                                     )}
                                 </div>
@@ -106,14 +147,57 @@ const Auth: React.FC = () => {
                                     <Mail className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-all" />
                                     <input
                                         type="email"
-                                        placeholder="seu-email@swm-intl.com"
+                                        placeholder="exemplo@swmintl.com"
                                         className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/5 rounded-2xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:bg-white/10 transition-all placeholder:text-slate-600 font-medium"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
                                     />
                                 </div>
+                                {email.toLowerCase().includes('swm') && !email.includes('-') && (
+                                    <p className="text-[10px] text-blue-400 mt-2 ml-1 font-bold animate-pulse">
+                                        Dica: Verifique se o domínio correto é @swm-intl.com
+                                    </p>
+                                )}
                             </div>
+
+                            {mode === 'signup' && (
+                                <>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                                            Nome Completo
+                                        </label>
+                                        <div className="relative group">
+                                            <User className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-all" />
+                                            <input
+                                                type="text"
+                                                placeholder="Ex: Diogo Jesus"
+                                                className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/5 rounded-2xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:bg-white/10 transition-all placeholder:text-slate-600 font-medium"
+                                                value={fullName}
+                                                onChange={(e) => setFullName(e.target.value)}
+                                                required={mode === 'signup'}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                                            Cargo / Função
+                                        </label>
+                                        <div className="relative group">
+                                            <Briefcase className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-blue-500 transition-all" />
+                                            <input
+                                                type="text"
+                                                placeholder="Ex: Técnico de PCM"
+                                                className="w-full pl-16 pr-6 py-5 bg-white/5 border border-white/5 rounded-2xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-600/30 focus:bg-white/10 transition-all placeholder:text-slate-600 font-medium"
+                                                value={role}
+                                                onChange={(e) => setRole(e.target.value)}
+                                                required={mode === 'signup'}
+                                            />
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center ml-1">

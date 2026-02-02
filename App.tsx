@@ -11,7 +11,7 @@ import ImportInfoModal from './components/ImportInfoModal';
 import ShutdownCalendar from './components/ShutdownCalendar';
 import ShutdownModal from './components/ShutdownModal';
 import AssetManagement from './components/AssetManagement';
-import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift, AppNotification, OrderFilters } from './types';
+import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift, AppNotification, OrderFilters, UserProfile } from './types';
 import { mockOS, mockTechnicians, mockShutdowns, mockAssets } from './mockData';
 import AdvancedFilters from './components/AdvancedFilters';
 import { exportToPDF } from './utils/pdfUtils';
@@ -47,6 +47,7 @@ const App: React.FC = () => {
   const [assets, setAssets] = useState<Asset[]>(mockAssets);
   const [allLogs, setAllLogs] = useState<LogEntry[]>([]);
   const [session, setSession] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   // Advanced Filtering State
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
@@ -95,16 +96,56 @@ const App: React.FC = () => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      if (session) {
+        fetchUserProfile(session.user);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        fetchUserProfile(session.user);
+      } else {
+        setUserProfile(null);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserProfile = async (user: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setUserProfile({
+          id: data.id,
+          fullName: data.full_name,
+          role: data.role,
+          email: data.email
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao buscar perfil:', err);
+      // Fallback: use user_metadata if profile table fails or entry missing
+      const metadata = user.user_metadata || {};
+      setUserProfile({
+        id: user.id,
+        fullName: metadata.full_name || "Usuário",
+        role: metadata.role || "Técnico de PCM",
+        email: user.email || ""
+      });
+    }
+  };
+
 
   // Initial load simulation
   // Fetch maintenance orders from Supabase
@@ -1008,11 +1049,17 @@ const App: React.FC = () => {
 
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
               <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
-                DJ
+                {userProfile ?
+                  (userProfile.fullName || 'U').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                  : '??'}
               </div>
               <div className="hidden lg:block">
-                <p className="text-sm font-bold text-slate-800 leading-tight">Diogo Jesus</p>
-                <p className="text-xs text-slate-500 font-medium">Técnico de PCM</p>
+                <p className="text-sm font-bold text-slate-800 leading-tight">
+                  {userProfile?.fullName || 'Carregando...'}
+                </p>
+                <p className="text-xs text-slate-500 font-medium">
+                  {userProfile?.role || 'PCM Technician'}
+                </p>
               </div>
               <button
                 onClick={handleLogout}
