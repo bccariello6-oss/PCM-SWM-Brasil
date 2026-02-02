@@ -8,7 +8,8 @@ import AssetForm from './components/AssetForm';
 import WorkOrderList from './components/WorkOrderList';
 import TeamManagement from './components/TeamManagement';
 import ImportInfoModal from './components/ImportInfoModal';
-import ShutdownManagement from './components/ShutdownManagement';
+import ShutdownCalendar from './components/ShutdownCalendar';
+import ShutdownModal from './components/ShutdownModal';
 import AssetManagement from './components/AssetManagement';
 import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift, AppNotification, OrderFilters } from './types';
 import { mockOS, mockTechnicians, mockShutdowns, mockAssets } from './mockData';
@@ -82,6 +83,10 @@ const App: React.FC = () => {
 
   // Import Modal State
   const [isImportInfoOpen, setIsImportInfoOpen] = useState(false);
+
+  // Shutdown Modal State
+  const [isShutdownModalOpen, setIsShutdownModalOpen] = useState(false);
+  const [selectedShutdown, setSelectedShutdown] = useState<Partial<OperationalShutdown> | undefined>();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -694,6 +699,131 @@ const App: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const handleSaveShutdown = async (shutdown: OperationalShutdown) => {
+    setIsLoading(true);
+    try {
+      const isUpdate = !!shutdowns.find(s => s.id === shutdown.id);
+
+      if (isUpdate) {
+        const { error: updateError } = await supabase
+          .from('operational_shutdowns')
+          .update({
+            machine: shutdown.machine,
+            date: shutdown.date,
+            start_time: shutdown.startTime,
+            duration: shutdown.duration,
+            service: shutdown.service,
+            impact: shutdown.impact,
+            status: shutdown.status
+          })
+          .eq('id', shutdown.id);
+
+        if (updateError) throw updateError;
+        showNotification('Parada atualizada com sucesso!');
+      } else {
+        const { error: insertError } = await supabase
+          .from('operational_shutdowns')
+          .insert([{
+            machine: shutdown.machine,
+            date: shutdown.date,
+            start_time: shutdown.startTime,
+            duration: shutdown.duration,
+            service: shutdown.service,
+            impact: shutdown.impact,
+            status: shutdown.status
+          }]);
+
+        if (insertError) throw insertError;
+        showNotification('Nova parada agendada com sucesso!');
+      }
+
+      await fetchShutdowns();
+      setIsShutdownModalOpen(false);
+    } catch (err: any) {
+      console.error('Erro ao salvar parada:', err);
+      // Fallback local if table doesn't exist yet
+      if (err.code === '42P01') {
+        setShutdowns(prev => {
+          const exists = prev.find(s => s.id === shutdown.id);
+          if (exists) return prev.map(s => s.id === shutdown.id ? shutdown : s);
+          return [...prev, shutdown];
+        });
+        showNotification('Salvo localmente (Tabela não encontrada)', 'error');
+        setIsShutdownModalOpen(false);
+      } else {
+        showNotification('Erro ao salvar parada: ' + err.message, 'error');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteShutdown = async (id: string) => {
+    if (!confirm('Deseja realmente cancelar esta parada?')) return;
+
+    setIsLoading(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from('operational_shutdowns')
+        .delete()
+        .eq('id', id);
+
+      if (deleteError) throw deleteError;
+      showNotification('Parada cancelada com sucesso!');
+      await fetchShutdowns();
+      setIsShutdownModalOpen(false);
+    } catch (err: any) {
+      console.error('Erro ao excluir parada:', err);
+      if (err.code === '42P01') {
+        setShutdowns(prev => prev.filter(s => s.id !== id));
+        showNotification('Removido localmente', 'error');
+        setIsShutdownModalOpen(false);
+      } else {
+        showNotification('Erro ao excluir parada: ' + err.message, 'error');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchShutdowns = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('operational_shutdowns')
+        .select('*');
+
+      if (error) throw error;
+
+      const formatted: OperationalShutdown[] = (data || []).map((s: any) => ({
+        id: s.id,
+        machine: s.machine,
+        date: s.date,
+        startTime: s.start_time,
+        duration: Number(s.duration),
+        service: s.service,
+        impact: s.impact,
+        status: s.status as any
+      }));
+
+      // Merge with mock if empty to show scenario
+      if (formatted.length === 0) {
+        setShutdowns(mockShutdowns);
+      } else {
+        setShutdowns(formatted);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar paradas:', err);
+      // Fallback to mock on error (e.g. table not found)
+      setShutdowns(mockShutdowns);
+    }
+  };
+
+  useEffect(() => {
+    if (session) {
+      fetchShutdowns();
+    }
+  }, [session]);
+
   const clearAllData = async () => {
     if (confirm('ATENÇÃO: Isso irá apagar TODAS as informações de programação da nuvem. Deseja continuar?')) {
       setIsLoading(true);
@@ -1072,9 +1202,16 @@ const App: React.FC = () => {
               )}
 
               {activeView === 'shutdowns' && (
-                <ShutdownManagement
+                <ShutdownCalendar
                   shutdowns={shutdowns}
-                  onAdd={() => alert('Abrir modal de parada em desenvolvimento')}
+                  onAdd={(date) => {
+                    setSelectedShutdown({ date });
+                    setIsShutdownModalOpen(true);
+                  }}
+                  onEdit={(shutdown) => {
+                    setSelectedShutdown(shutdown);
+                    setIsShutdownModalOpen(true);
+                  }}
                 />
               )}
 
@@ -1165,6 +1302,14 @@ const App: React.FC = () => {
           onProceed={handleProceedWithImport}
         />
       )}
+
+      <ShutdownModal
+        isOpen={isShutdownModalOpen}
+        onClose={() => setIsShutdownModalOpen(false)}
+        onSave={handleSaveShutdown}
+        onDelete={handleDeleteShutdown}
+        shutdown={selectedShutdown}
+      />
     </div>
   );
 };

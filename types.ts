@@ -70,10 +70,12 @@ export interface Technician {
 
 export interface OperationalShutdown {
   id: string;
-  area: string;
-  days: string[];
+  machine: string;
+  date: string;
+  startTime: string;
+  duration: number;
+  service: string;
   impact: string;
-  reason: string;
   status: 'Agendada' | 'Em Curso' | 'Concluída';
 }
 
