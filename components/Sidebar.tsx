@@ -7,8 +7,7 @@ import {
   Users,
   AlertTriangle,
   Settings,
-  Factory,
-  History as HistoryIcon
+  Factory
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -24,7 +23,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView }) => {
     { id: 'teams', label: 'Equipes & Turnos', icon: Users },
     { id: 'shutdowns', label: 'Paradas', icon: AlertTriangle },
     { id: 'assets', label: 'Ativos & Áreas', icon: Factory },
-    { id: 'history', label: 'Histórico Semanal', icon: HistoryIcon },
   ];
 
   return (
