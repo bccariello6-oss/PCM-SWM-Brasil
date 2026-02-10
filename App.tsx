@@ -747,7 +747,9 @@ const App: React.FC = () => {
   const handleSaveShutdown = async (shutdown: OperationalShutdown) => {
     setIsLoading(true);
     try {
-      const isUpdate = !!shutdowns.find(s => s.id === shutdown.id);
+      // Check if it's a real record (UUID) or mock data
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(shutdown.id);
+      const isUpdate = isUUID && !!shutdowns.find(s => s.id === shutdown.id);
 
       if (isUpdate) {
         const { error: updateError } = await supabase

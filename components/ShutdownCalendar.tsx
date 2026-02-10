@@ -146,9 +146,18 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, onAdd, o
                         <div key={m.index} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[300px]">
                             <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
                                 <h4 className="font-bold text-slate-800 capitalize">{m.name}</h4>
-                                <span className="text-[10px] font-bold bg-white px-2 py-0.5 rounded-full border border-slate-200 text-slate-500">
-                                    {monthShutdowns.length} paradas
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-bold bg-white px-2 py-0.5 rounded-full border border-slate-200 text-slate-500">
+                                        {monthShutdowns.length}
+                                    </span>
+                                    <button
+                                        onClick={() => onAdd(`${year}-${String(m.index + 1).padStart(2, '0')}-01`)}
+                                        className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-blue-600 transition-all"
+                                        title={`Adicionar parada em ${m.name}`}
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex-1 p-3 overflow-y-auto space-y-2 scrollbar-hide">
                                 {monthShutdowns.length > 0 ? (
