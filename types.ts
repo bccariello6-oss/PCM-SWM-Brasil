@@ -76,6 +76,7 @@ export interface OperationalShutdown {
   date: string;
   startTime: string;
   duration: number;
+  realizedDuration?: number;
   service: string;
   impact: string;
   status: 'Agendada' | 'Em Curso' | 'Concluída';

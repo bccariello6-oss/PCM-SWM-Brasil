@@ -757,6 +757,7 @@ const App: React.FC = () => {
             date: shutdown.date,
             start_time: shutdown.startTime,
             duration: shutdown.duration,
+            realized_duration: shutdown.realizedDuration || null,
             service: shutdown.service,
             impact: shutdown.impact,
             status: shutdown.status
@@ -773,6 +774,7 @@ const App: React.FC = () => {
             date: shutdown.date,
             start_time: shutdown.startTime,
             duration: shutdown.duration,
+            realized_duration: shutdown.realizedDuration || null,
             service: shutdown.service,
             impact: shutdown.impact,
             status: shutdown.status
@@ -845,6 +847,7 @@ const App: React.FC = () => {
         date: s.date,
         startTime: s.start_time,
         duration: Number(s.duration),
+        realizedDuration: s.realized_duration !== null ? Number(s.realized_duration) : undefined,
         service: s.service,
         impact: s.impact,
         status: s.status as any

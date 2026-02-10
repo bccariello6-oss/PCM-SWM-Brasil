@@ -29,3 +29,9 @@ export const STATUS_COLORS: Record<OSStatus, string> = {
   [OSStatus.COMPLETED]: 'border-green-500 text-green-700 bg-green-50',
   [OSStatus.REPROGRAMMED]: 'border-orange-400 text-orange-700 bg-orange-50'
 };
+
+export const MACHINE_SHUTDOWN_BUDGETS: Record<string, number> = {
+  'MP01': 120, // Example budgets, adjust if user provides specific ones
+  'MP03': 150,
+  'MP06': 100
+};

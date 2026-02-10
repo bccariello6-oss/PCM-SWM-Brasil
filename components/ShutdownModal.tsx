@@ -167,6 +167,20 @@ const ShutdownModal: React.FC<ShutdownModalProps> = ({
                             />
                         </div>
 
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5 ml-1">
+                                <Clock className="w-3 h-3" /> Horas Realizadas
+                            </label>
+                            <input
+                                type="number"
+                                step="0.1"
+                                value={formData.realizedDuration || ''}
+                                onChange={(e) => setFormData({ ...formData, realizedDuration: e.target.value ? Number(e.target.value) : undefined })}
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-blue-50 outline-none transition-all"
+                                placeholder="Ainda não realizada"
+                            />
+                        </div>
+
                         <div className="space-y-2 col-span-2">
                             <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1.5 ml-1">
                                 <Hammer className="w-3 h-3" /> Serviço a ser Executado
