@@ -235,7 +235,9 @@ const App: React.FC = () => {
         name: t.nome || t.name || 'Sem Nome',
         discipline: t.disciplina || t.discipline || Discipline.MECHANICS,
         shift: t.mudança || t.shift || Shift.ADM,
-        isLeader: t.é_líder !== undefined ? t.é_líder : (t.is_leader || false)
+        isLeader: t.é_líder !== undefined ? t.é_líder : (t.is_leader || false),
+        email: t.email,
+        phone: t.phone
       }));
 
       setTechnicians(formattedTechnicians);
@@ -552,7 +554,9 @@ const App: React.FC = () => {
         name: techData.name,
         discipline: techData.discipline,
         shift: techData.shift,
-        is_leader: techData.isLeader
+        is_leader: techData.isLeader,
+        email: techData.email || null,
+        phone: techData.phone || null
       };
 
       if (isUpdate) {

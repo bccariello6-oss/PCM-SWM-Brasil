@@ -66,6 +66,8 @@ export interface Technician {
   discipline: Discipline;
   shift: Shift;
   isLeader: boolean;
+  email?: string;
+  phone?: string;
 }
 
 export interface OperationalShutdown {

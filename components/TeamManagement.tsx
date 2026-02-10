@@ -213,12 +213,43 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
 
                           <div className="mt-4 pt-1 flex items-center justify-between">
                             <div className="flex gap-1.5">
-                              <button className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                <Mail className="w-4 h-4" />
-                              </button>
-                              <button className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-colors">
-                                <Phone className="w-4 h-4" />
-                              </button>
+                              {tech.email ? (
+                                <a
+                                  href={`mailto:${tech.email}`}
+                                  title={`Enviar e-mail para ${tech.email}`}
+                                  className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                >
+                                  <Mail className="w-4 h-4" />
+                                </a>
+                              ) : (
+                                <button
+                                  disabled
+                                  title="E-mail não cadastrado"
+                                  className="p-2 bg-slate-50 text-slate-200 rounded-xl cursor-not-allowed"
+                                >
+                                  <Mail className="w-4 h-4" />
+                                </button>
+                              )}
+
+                              {tech.phone ? (
+                                <a
+                                  href={`https://wa.me/${tech.phone.replace(/\D/g, '')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title={`Conversar no WhatsApp: ${tech.phone}`}
+                                  className="p-2 bg-slate-50 text-slate-400 rounded-xl hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+                                >
+                                  <Phone className="w-4 h-4" />
+                                </a>
+                              ) : (
+                                <button
+                                  disabled
+                                  title="WhatsApp não cadastrado"
+                                  className="p-2 bg-slate-50 text-slate-200 rounded-xl cursor-not-allowed"
+                                >
+                                  <Phone className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                             <button className="text-xs font-bold text-blue-600 px-3 py-1.5 hover:bg-blue-50 rounded-xl transition-colors">
                               Ver Escala

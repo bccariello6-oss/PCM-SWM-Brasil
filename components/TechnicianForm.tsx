@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, Save, HardHat, User, Briefcase, Clock, ShieldCheck } from 'lucide-react';
+import { X, Save, HardHat, User, Briefcase, Clock, ShieldCheck, Mail, Phone } from 'lucide-react';
 import { Technician, Discipline, Shift } from '../types';
 import { DISCIPLINE_COLORS } from '../constants';
 
@@ -87,17 +87,44 @@ const TechnicianForm: React.FC<TechnicianFormProps> = ({ technician, onClose, on
           </div>
 
           <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
-             <input
-               type="checkbox"
-               id="leader"
-               className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-               checked={formData.isLeader}
-               onChange={e => setFormData({ ...formData, isLeader: e.target.checked })}
-             />
-             <label htmlFor="leader" className="text-sm font-semibold text-slate-700 cursor-pointer select-none flex items-center gap-2">
-               <ShieldCheck className="w-4 h-4 text-blue-600" />
-               Líder de Equipe / Encarregado
-             </label>
+            <input
+              type="checkbox"
+              id="leader"
+              className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              checked={formData.isLeader}
+              onChange={e => setFormData({ ...formData, isLeader: e.target.checked })}
+            />
+            <label htmlFor="leader" className="text-sm font-semibold text-slate-700 cursor-pointer select-none flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-blue-600" />
+              Líder de Equipe / Encarregado
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                <Mail className="w-3 h-3" /> E-mail
+              </label>
+              <input
+                type="email"
+                placeholder="tecnico@empresa.com"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                value={formData.email || ''}
+                onChange={e => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-2">
+                <Phone className="w-3 h-3" /> Telefone / WhatsApp
+              </label>
+              <input
+                type="tel"
+                placeholder="(00) 00000-0000"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all"
+                value={formData.phone || ''}
+                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
           </div>
         </form>
 
