@@ -20,7 +20,13 @@ export default async function handler(req, res) {
             .eq('senha', password)
             .single();
 
-        if (error || !data) {
+        if (error) {
+            console.error('Database error details:', error);
+            // Return specific DB error for easier debugging on Vercel
+            return res.status(200).json({ success: false, error: `Erro no banco de dados: ${error.message || JSON.stringify(error)}` });
+        }
+
+        if (!data) {
             return res.status(200).json({ success: false, error: 'Credenciais inválidas' });
         }
 
@@ -34,6 +40,6 @@ export default async function handler(req, res) {
         });
     } catch (error) {
         console.error('Login error:', error);
-        return res.status(500).json({ success: false, error: 'Erro interno' });
+        return res.status(500).json({ success: false, error: `Erro interno: ${error.message || 'Erro desconhecido'}` });
     }
 }
