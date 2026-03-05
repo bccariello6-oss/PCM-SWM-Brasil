@@ -44,7 +44,7 @@ import { Activity, User, ProgressLog, calculateActivityStatus, calculateDelay, c
 import { generateSCurveData } from './utils';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { supabase } from '../supabaseClient';
+import { supabase, isSupabaseConfigured } from '../supabaseClient';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -124,6 +124,13 @@ export default function App() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
+    if (!isSupabaseConfigured) {
+      alert("ERRO VERCEL: As variáveis VITE_SUPABASE... não foram injetadas no projeto! Como você as adicionou recentemente no painel, por favor, vá na aba 'Deployments' da Vercel, clique nos 3 pontinhos do deploy mais recente e escolha 'Redeploy' (desmarcando 'Use Existing Build Cache') para que o sistema reconheça as novas senhas.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('Usuários')
