@@ -44,6 +44,7 @@ import { Activity, User, ProgressLog, calculateActivityStatus, calculateDelay, c
 import { generateSCurveData } from './utils';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { supabase } from '../supabaseClient';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -122,21 +123,37 @@ export default function App() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: loginUsername, password: loginPassword })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUser(data.user);
-        if (data.user.role === 'ADMIN') setView('MANAGEMENT');
+      const { data, error } = await supabase
+        .from('Usuários')
+        .select('*')
+        .eq('nome_usuário', loginUsername)
+        .eq('senha', loginPassword)
+        .single();
+
+      if (error) {
+        console.error('Database error:', error);
+        alert(`Erro ao verificar credenciais: ${error.message} - Verifique se a tabela 'Usuários' existe e permite acesso.`);
+        return;
+      }
+
+      if (data) {
+        const loggedUser = {
+          id: data.id,
+          username: data['nome_usuário'],
+          role: data['função']
+        };
+        setUser(loggedUser as any); // Cast as any to bypass exact User type constraints just in case
+        if (loggedUser.role === 'ADMIN') setView('MANAGEMENT');
       } else {
         alert('Credenciais inválidas');
       }
     } catch (error) {
-      alert('Erro ao fazer login');
+      console.error('Login error:', error);
+      alert('Erro inesperado ao fazer login. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
