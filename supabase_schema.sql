@@ -49,10 +49,21 @@ CREATE TABLE IF NOT EXISTS public.log_entries (
     new_value TEXT
 );
 
+-- 5. Tabela de perfis de usuário (English)
+CREATE TABLE IF NOT EXISTS public.profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    full_name TEXT,
+    role TEXT,
+    email TEXT,
+    avatar_url TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- 5. Habilitar RLS
 ALTER TABLE public.technicians ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.maintenance_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.log_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- 6. Limpar e recriar políticas idempotentes
 DO $$ 
@@ -68,6 +79,10 @@ BEGIN
     -- Logs
     DROP POLICY IF EXISTS "Allow public select logs" ON public.log_entries;
     DROP POLICY IF EXISTS "Allow public insert logs" ON public.log_entries;
+    -- Profiles
+    DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+    DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
+    DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 END $$;
 
 -- 7. Criar políticas
@@ -81,3 +96,7 @@ CREATE POLICY "Allow public delete" ON public.maintenance_orders FOR DELETE USIN
 
 CREATE POLICY "Allow public select logs" ON public.log_entries FOR SELECT USING (true);
 CREATE POLICY "Allow public insert logs" ON public.log_entries FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR SELECT USING (true);
+CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);

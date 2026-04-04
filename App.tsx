@@ -216,26 +216,16 @@ const App: React.FC = () => {
   const fetchTechnicians = async () => {
     setIsLoading(true);
     try {
-      // Tentar buscar de 'técnicos' (como visto no seu Supabase) e fallback para 'technicians'
-      let { data, error } = await supabase.from('technicians').select('*');
-
-      if (error) {
-        console.warn('Tentando fallback para "técnicos"...', error);
-        const fallback = await supabase.from('técnicos').select('*');
-        if (!fallback.error) {
-          data = fallback.data;
-          error = null;
-        }
-      }
+      const { data, error } = await supabase.from('technicians').select('*');
 
       if (error) throw error;
 
       const formattedTechnicians: Technician[] = (data || []).map((t: any) => ({
         id: t.id,
-        name: t.nome || t.name || 'Sem Nome',
-        discipline: t.disciplina || t.discipline || Discipline.MECHANICS,
-        shift: t.mudança || t.shift || Shift.ADM,
-        isLeader: t.é_líder !== undefined ? t.é_líder : (t.is_leader || false),
+        name: t.name || 'Sem Nome',
+        discipline: t.discipline as Discipline || Discipline.MECHANICS,
+        shift: t.shift as Shift || Shift.ADM,
+        isLeader: !!t.is_leader,
         email: t.email,
         phone: t.phone
       }));
@@ -386,7 +376,7 @@ const App: React.FC = () => {
 
   const handleSaveOS = async (newOS: MaintenanceOrder, shouldClose: boolean = true) => {
     const timestamp = new Date().toISOString();
-    const currentUser = "Diogo Jesus";
+    const currentUser = userProfile?.fullName || "Usuário";
     setIsLoading(true);
 
     let osPayload: any = null;
@@ -453,7 +443,7 @@ const App: React.FC = () => {
 
         if (updateError) throw updateError;
         showNotification('Ordem de Serviço atualizada com sucesso!');
-        addNotification(`OS #${newOS.osNumber} atualizada por Diogo Jesus`, 'success');
+        addNotification(`OS #${newOS.osNumber} atualizada por ${currentUser}`, 'success');
       } else {
         // Garantir que não estamos tentando enviar um ID temporário/inválido
         const { id, ...insertPayload } = osPayload as any;
@@ -475,7 +465,7 @@ const App: React.FC = () => {
         });
 
         showNotification('Nova OS criada com sucesso!');
-        addNotification(`Nova OS #${insertPayload.os_number} criada por Diogo Jesus`, 'success');
+        addNotification(`Nova OS #${insertPayload.os_number} criada por ${currentUser}`, 'success');
       }
 
       // Inserir logs se houver
@@ -544,12 +534,6 @@ const App: React.FC = () => {
     try {
       const isUpdate = !!(selectedTech && selectedTech.id);
 
-      // Mapeamento resiliente para o banco (English keys by default, but we should handle DB structure)
-      // Se descobrimos que o banco usa Portuguese keys, precisamos mapear aqui também.
-      // Por simplicidade, continuaremos usando English keys para INSERT/UPDATE
-      // assumindo que o script de criação original as usou.
-      // SE o usuário criou a tabela manualmente com outros nomes, este update falhará.
-
       const techPayload = {
         name: techData.name,
         discipline: techData.discipline,
@@ -561,31 +545,17 @@ const App: React.FC = () => {
 
       if (isUpdate) {
         const { error } = await supabase
-          .from('técnicos') // Tentar 'técnicos' primeiro
+          .from('technicians')
           .update(techPayload)
           .eq('id', selectedTech!.id);
-
-        if (error) {
-          // Fallback para 'technicians'
-          const { error: fallbackError } = await supabase
-            .from('technicians')
-            .update(techPayload)
-            .eq('id', selectedTech!.id);
-          if (fallbackError) throw fallbackError;
-        }
+        if (error) throw error;
         showNotification('Técnico atualizado com sucesso!');
         addNotification(`Técnico ${techData.name} atualizado no sistema`, 'info');
       } else {
         const { error } = await supabase
-          .from('técnicos')
+          .from('technicians')
           .insert([techPayload]);
-
-        if (error) {
-          const { error: fallbackError } = await supabase
-            .from('technicians')
-            .insert([techPayload]);
-          if (fallbackError) throw fallbackError;
-        }
+        if (error) throw error;
         showNotification('Novo técnico cadastrado com sucesso!');
         addNotification(`Novo técnico ${techData.name} cadastrado`, 'success');
       }

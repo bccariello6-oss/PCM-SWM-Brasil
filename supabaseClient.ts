@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
 if (!isSupabaseConfigured) {
-  console.warn('Supabase URL ou Anon Key não encontradas no arquivo .env. Usando modo de simulação (Mock Mode).');
+  console.warn('⚠️ Supabase URL ou Anon Key não encontradas no arquivo .env. Usando modo de simulação (Mock Mode).');
 }
 
 // Simple Mock Authentication for Development
@@ -16,7 +16,6 @@ const listeners: ((event: string, session: any) => void)[] = [];
 const mockAuth = {
   onAuthStateChange: (callback: (event: string, session: any) => void) => {
     listeners.push(callback);
-    // Initial trigger
     setTimeout(() => callback('SIGNED_IN', mockSession), 0);
     return {
       data: {
@@ -31,19 +30,18 @@ const mockAuth = {
   },
   getSession: async () => ({ data: { session: mockSession }, error: null }),
   getUser: async () => ({ data: { user: mockSession?.user || null }, error: null }),
-  signInWithPassword: async ({ email, password }: any) => {
-    // Basic simulation: any login works in mock mode
+  signInWithPassword: async ({ email }: any) => {
     if (email) {
       mockSession = {
         access_token: 'mock-token',
-        user: { id: 'mock-user-id', email, user_metadata: {} }
+        user: { id: 'mock-user-id', email, user_metadata: { full_name: "Usuário Mock" } }
       };
       listeners.forEach(cb => cb('SIGNED_IN', mockSession));
       return { data: { session: mockSession, user: mockSession.user }, error: null };
     }
     return { data: { session: null, user: null }, error: { message: 'Por favor, insira o e-mail.' } };
   },
-  signUp: async ({ email, password }: any) => {
+  signUp: async ({ email }: any) => {
     if (email) {
       return { data: { user: { id: 'mock-user-id', email }, session: null }, error: null };
     }
@@ -58,6 +56,6 @@ const mockAuth = {
 
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey)
-  : { auth: mockAuth } as any;
+  : { auth: mockAuth, from: () => ({ select: () => ({ data: [], error: null }), insert: () => ({ error: null }), update: () => ({ error: null }), delete: () => ({ error: null }) }) } as any;
 
 export const IS_MOCK_MODE = !isSupabaseConfigured;
