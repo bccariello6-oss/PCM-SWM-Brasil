@@ -25,6 +25,12 @@
       ]
     },
     "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "noEmit": true,
+    "strict": false
+  },
+  "include": [
+    "src",
+    "vite-env.d.ts",
+    "vite.config.ts"
+  ]
 }
