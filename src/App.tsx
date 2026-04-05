@@ -24,7 +24,7 @@ import {
   XCircle,
   ArrowUp
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import {
   LineChart,
