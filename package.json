@@ -1,8 +1,8 @@
 {
-  "name": "pcm-swm-brasil-industrial",
+  "name": "pcm-swm-planejamento-semanal-programada",
   "version": "1.0.0",
   "private": true,
-  "description": "Sistema de Planejamento e Controle de Manutenção Industrial",
+  "description": "Sistema de Planejamento Semanal e Programada para Manutenção Industrial",
   "type": "module",
   "scripts": {
     "dev": "vite",
