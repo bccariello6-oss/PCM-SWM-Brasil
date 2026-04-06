@@ -107,13 +107,24 @@ export default function App() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/activities?role=${user?.role}&username=${user?.username}`);
-      const data = await res.json();
-      setActivities(data);
+      const { data: actData, error: actError } = await supabase
+        .from('activities')
+        .select('*')
+        .order('import_order', { ascending: true });
+      if (actError) throw actError;
+      setActivities((actData || []).map((a: any) => ({
+        ...a,
+        weight: a.weight ?? 1,
+        percent_progress: a.percent_progress ?? 0,
+        duration: a.duration ?? 0,
+      })));
 
-      const dashRes = await fetch('/api/dashboard');
-      const dashData = await dashRes.json();
-      setLogs(dashData.logs);
+      const { data: logData, error: logError } = await supabase
+        .from('progress_logs')
+        .select('*')
+        .order('timestamp', { ascending: true });
+      if (logError) throw logError;
+      setLogs(logData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -126,32 +137,32 @@ export default function App() {
     setLoading(true);
 
     if (!isSupabaseConfigured) {
-      alert("ERRO VERCEL: As variáveis VITE_SUPABASE... não foram injetadas no projeto! Como você as adicionou recentemente no painel, por favor, vá na aba 'Deployments' da Vercel, clique nos 3 pontinhos do deploy mais recente e escolha 'Redeploy' (desmarcando 'Use Existing Build Cache') para que o sistema reconheça as novas senhas.");
+      alert("ERRO: As variáveis VITE_SUPABASE... não foram configuradas. Verifique o .env.local.");
       setLoading(false);
       return;
     }
 
     try {
       const { data, error } = await supabase
-        .from('Usuários')
+        .from('users')
         .select('*')
-        .eq('nome_usuário', loginUsername)
-        .eq('senha', loginPassword)
+        .eq('username', loginUsername)
+        .eq('password', loginPassword)
         .single();
 
       if (error) {
         console.error('Database error:', error);
-        alert(`Erro ao verificar credenciais: ${error.message} - Verifique se a tabela 'Usuários' existe e permite acesso.`);
+        alert(`Erro ao verificar credenciais: ${error.message}`);
         return;
       }
 
       if (data) {
-        const loggedUser = {
+        const loggedUser: User = {
           id: data.id,
-          username: data['nome_usuário'],
-          role: data['função']
+          username: data.username,
+          role: data.role as 'ADMIN' | 'RESPONSIBLE'
         };
-        setUser(loggedUser as any); // Cast as any to bypass exact User type constraints just in case
+        setUser(loggedUser);
         if (loggedUser.role === 'ADMIN') setView('MANAGEMENT');
       } else {
         alert('Credenciais inválidas');
@@ -176,25 +187,61 @@ export default function App() {
       try {
         setImportProgress(30);
         const arrayBuffer = evt.target?.result as ArrayBuffer;
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(sheet);
 
-        // Robust way to convert ArrayBuffer to Base64
-        const uint8Array = new Uint8Array(arrayBuffer);
-        let binary = '';
-        const chunkSize = 8192;
-        for (let i = 0; i < uint8Array.length; i += chunkSize) {
-          binary += String.fromCharCode.apply(null, uint8Array.subarray(i, i + chunkSize) as any);
-        }
-        const b64 = btoa(binary);
+        setImportProgress(50);
 
-        setImportProgress(60);
-        const res = await fetch('/api/activities/import', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fileData: b64 })
+        const mapped = data.map((row: any, index: number) => {
+          const startRaw = row.Inicio || row.start_date || row['Data Início'] || '';
+          const endRaw = row.Fim || row.end_date || row['Data Fim'] || '';
+
+          // Handle Excel date serial numbers
+          const parseExcelDate = (val: any): string => {
+            if (!val) return new Date().toISOString();
+            if (typeof val === 'number') {
+              // Excel serial date
+              const d = XLSX.SSF.parse_date_code(val);
+              return new Date(d.y, d.m - 1, d.d, d.H || 0, d.M || 0, d.S || 0).toISOString();
+            }
+            return new Date(val).toISOString();
+          };
+
+          return {
+            id: String(row.ID || row.id || `IMP-${index}`),
+            description: row.Descricao || row.description || row['Descrição'] || '',
+            start_date: parseExcelDate(startRaw),
+            end_date: parseExcelDate(endRaw),
+            duration: parseFloat(row.Duracao || row.duration || row['Duração'] || '0') || 0,
+            responsibility: row.Responsavel || row.responsibility || row['Responsável'] || '',
+            critical_path: row.Critico === 'Sim' || row.critical_path === true || false,
+            criticality: row.Criticidade || row.criticality || '',
+            category: row.Categoria || row.category || 'GERAL',
+            os: String(row.OS || row.os || ''),
+            resource: String(row.Recurso || row.resource || ''),
+            percent_progress: 0,
+            is_cancelled: false,
+            is_extra: false,
+            import_order: index,
+            weight: 1
+          };
         });
 
-        const result = await res.json();
-        if (!res.ok) throw new Error(result.error || 'Erro na importação');
+        setImportProgress(70);
+
+        // Clear existing activities and logs
+        await supabase.from('progress_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        await supabase.from('activities').delete().neq('id', '');
+
+        setImportProgress(85);
+
+        // Insert in chunks of 100
+        for (let i = 0; i < mapped.length; i += 100) {
+          const chunk = mapped.slice(i, i + 100);
+          const { error } = await supabase.from('activities').insert(chunk);
+          if (error) throw error;
+        }
 
         setImportProgress(100);
         setTimeout(() => {
@@ -217,21 +264,33 @@ export default function App() {
     if (!selectedActivity || !user) return;
 
     try {
-      await fetch('/api/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          activity_id: selectedActivity.id,
-          percent: updatePercent,
-          comment: updateComment,
-          user_id: user.id
-        })
-      });
+      // Update activity progress
+      const { error: updateError } = await supabase
+        .from('activities')
+        .update({ percent_progress: updatePercent, last_update: new Date().toISOString() })
+        .eq('id', selectedActivity.id);
+      if (updateError) throw updateError;
+
+      // Create log entry only if there is a comment
+      if (updateComment.trim()) {
+        const { error: logError } = await supabase
+          .from('progress_logs')
+          .insert({
+            activity_id: selectedActivity.id,
+            percent: updatePercent,
+            comment: updateComment,
+            user_id: user.id,
+            timestamp: new Date().toISOString()
+          });
+        if (logError) throw logError;
+      }
+
       setSelectedActivity(null);
       setUpdatePercent(0);
       setUpdateComment('');
       fetchData();
     } catch (error) {
+      console.error('Update progress error:', error);
       alert('Erro ao atualizar progresso');
     }
   };
@@ -243,17 +302,12 @@ export default function App() {
     setActivities(prev => prev.map(a => a.id === activityId ? { ...a, percent_progress: percent } : a));
 
     try {
-      await fetch('/api/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          activity_id: activityId,
-          percent: percent,
-          comment: 'Atualização rápida',
-          user_id: user.id
-        })
-      });
-      // Fetch data to sync logs and S-curve
+      const { error } = await supabase
+        .from('activities')
+        .update({ percent_progress: percent, last_update: new Date().toISOString() })
+        .eq('id', activityId);
+      if (error) throw error;
+      // No log for quick updates (by design)
       fetchData();
     } catch (error) {
       console.error('Erro ao atualizar progresso:', error);
@@ -265,15 +319,14 @@ export default function App() {
     if (!user || selectedIds.length === 0) return;
     setIsBulkUpdating(true);
     try {
-      await fetch('/api/progress/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          activity_ids: selectedIds,
-          percent: bulkPercent,
-          user_id: user.id
-        })
-      });
+      // Update all selected activities
+      for (const id of selectedIds) {
+        const { error } = await supabase
+          .from('activities')
+          .update({ percent_progress: bulkPercent, last_update: new Date().toISOString() })
+          .eq('id', id);
+        if (error) throw error;
+      }
       setSelectedIds([]);
       fetchData();
     } catch (error) {
@@ -286,27 +339,40 @@ export default function App() {
 
   const handleAddExtra = async () => {
     try {
-      const res = await fetch('/api/activities/extra', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(extraOrder)
+      const { error } = await supabase.from('activities').insert({
+        id: extraOrder.id,
+        description: extraOrder.description,
+        start_date: new Date(extraOrder.start_date).toISOString(),
+        end_date: new Date(extraOrder.end_date).toISOString(),
+        duration: 0,
+        responsibility: extraOrder.responsibility,
+        critical_path: false,
+        category: 'EXTRA',
+        os: extraOrder.os,
+        resource: extraOrder.resource,
+        percent_progress: 0,
+        is_cancelled: false,
+        is_extra: true,
+        weight: 1
       });
-      if (res.ok) {
-        setShowExtraModal(false);
-        setExtraOrder({
-          id: '',
-          description: '',
-          start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-          end_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-          responsibility: '',
-          category: 'EXTRA',
-          os: '',
-          resource: ''
-        });
-        fetchData();
-      } else {
+
+      if (error) {
         alert('Erro ao adicionar ordem extra. Verifique se o ID já existe.');
+        return;
       }
+
+      setShowExtraModal(false);
+      setExtraOrder({
+        id: '',
+        description: '',
+        start_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        end_date: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        responsibility: '',
+        category: 'EXTRA',
+        os: '',
+        resource: ''
+      });
+      fetchData();
     } catch (error) {
       alert('Erro de conexão');
     }
@@ -314,15 +380,13 @@ export default function App() {
 
   const handleCancelActivity = async (id: string, currentStatus: boolean) => {
     try {
-      const res = await fetch('/api/activities/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, is_cancelled: !currentStatus })
-      });
-      if (res.ok) {
-        fetchData();
-        setActivityToCancel(null);
-      }
+      const { error } = await supabase
+        .from('activities')
+        .update({ is_cancelled: !currentStatus })
+        .eq('id', id);
+      if (error) throw error;
+      fetchData();
+      setActivityToCancel(null);
     } catch (error) {
       console.error('Cancel error:', error);
     }
@@ -341,18 +405,17 @@ export default function App() {
     }
 
     try {
-      const res = await fetch('/api/activities/reset', { method: 'POST' });
-      const data = await res.json();
-      if (data.success) {
-        setActivities([]);
-        setLogs([]);
-        setShowResetConfirm(false);
-        setResetConfirmText('');
-        alert('Base de dados resetada com sucesso.');
-        setView('IMPORT');
-      } else {
-        alert('Erro ao resetar base de dados: ' + (data.error || 'Erro desconhecido'));
-      }
+      // Delete progress logs first (foreign key)
+      await supabase.from('progress_logs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      // Delete all activities
+      await supabase.from('activities').delete().neq('id', '');
+
+      setActivities([]);
+      setLogs([]);
+      setShowResetConfirm(false);
+      setResetConfirmText('');
+      alert('Base de dados resetada com sucesso.');
+      setView('IMPORT');
     } catch (error) {
       console.error('Reset error:', error);
       alert('Erro ao resetar base de dados');
@@ -1012,7 +1075,7 @@ export default function App() {
                         <input
                           type="checkbox"
                           checked={allSelected}
-                          ref={el => el && (el.indeterminate = someSelected && !allSelected)}
+                          ref={el => { if (el) el.indeterminate = someSelected && !allSelected; }}
                           onChange={() => {
                             if (allSelected) {
                               setSelectedIds(prev => prev.filter(id => !groupActivities.map(a => a.id).includes(id)));
