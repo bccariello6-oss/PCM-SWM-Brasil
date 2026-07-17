@@ -53,10 +53,12 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, budgets,
             const totalRealized = machineShutdowns.reduce((acc, s) => acc + (s.realizedDuration !== undefined ? s.realizedDuration : 0), 0);
             const budget = budgets[machine] || 0;
             const percentUsed = budget > 0 ? (totalRealized / budget) * 100 : 0;
+            const remaining = Math.max(0, budget - totalRealized);
 
             return {
                 machine,
                 budget,
+                remaining,
                 realized: totalRealized,
                 planned: totalPlanned,
                 percent: Math.round(percentUsed)
@@ -126,17 +128,20 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, budgets,
                                     <span className="text-2xl font-bold text-slate-900">h</span>
                                 </div>
                             ) : (
-                                <h4
-                                    onClick={() => {
-                                        setEditingBudget(stat.machine);
-                                        setEditValue(String(stat.budget));
-                                    }}
-                                    className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-blue-600 transition-colors group/edit"
-                                >
-                                    {stat.budget}
-                                    <span className="text-lg ml-0.5 opacity-0 group-hover/edit:opacity-100 transition-opacity">✎</span>
-                                    h
-                                </h4>
+                                <div className="flex items-baseline gap-2">
+                                    <h4
+                                        onClick={() => {
+                                            setEditingBudget(stat.machine);
+                                            setEditValue(String(stat.budget));
+                                        }}
+                                        className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-blue-600 transition-colors group/edit"
+                                    >
+                                        {stat.remaining}
+                                        <span className="text-lg ml-0.5 opacity-0 group-hover/edit:opacity-100 transition-opacity">✎</span>
+                                        h
+                                    </h4>
+                                    <span className="text-xs text-slate-400 font-medium">restantes</span>
+                                </div>
                             )}
                         </div>
                         <div className={`p-2 rounded-xl ${stat.percent > 90 ? 'bg-red-50' : 'bg-blue-50'}`}>
@@ -145,7 +150,7 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, budgets,
                     </div>
                     <div>
                         <div className="flex justify-between text-[10px] font-bold mb-1.5">
-                            <span className="text-slate-500 uppercase">Utilizado: {stat.realized}h</span>
+                            <span className="text-slate-500 uppercase">Consumido: {stat.realized}h de {stat.budget}h</span>
                             <span className={stat.percent > 90 ? 'text-red-600' : 'text-blue-600'}>{stat.percent}%</span>
                         </div>
                         <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
