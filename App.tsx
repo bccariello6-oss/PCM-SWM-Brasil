@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import WeeklyGrid from './components/WeeklyGrid';
@@ -14,6 +14,7 @@ import ShutdownModal from './components/ShutdownModal';
 import AssetManagement from './components/AssetManagement';
 import { MaintenanceOrder, Technician, Discipline, OSStatus, OSType, OperationalShutdown, Asset, LogEntry, Shift, AppNotification, OrderFilters, UserProfile } from './types';
 import { mockOS, mockTechnicians, mockShutdowns, mockAssets } from './mockData';
+import { MACHINE_SHUTDOWN_BUDGETS } from './constants';
 import AdvancedFilters from './components/AdvancedFilters';
 import { exportToPDF } from './utils/pdfUtils';
 import { supabase } from './supabaseClient';
@@ -91,6 +92,10 @@ const App: React.FC = () => {
   // Shutdown Modal State
   const [isShutdownModalOpen, setIsShutdownModalOpen] = useState(false);
   const [selectedShutdown, setSelectedShutdown] = useState<Partial<OperationalShutdown> | undefined>();
+  const [shutdownBudgets, setShutdownBudgets] = useState<Record<string, number>>({...MACHINE_SHUTDOWN_BUDGETS});
+  const handleShutdownBudgetChange = useCallback((machine: string, newBudget: number) => {
+    setShutdownBudgets(prev => ({...prev, [machine]: newBudget}));
+  }, []);
 
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -1340,6 +1345,8 @@ const App: React.FC = () => {
               {activeView === 'shutdowns' && (
                 <ShutdownCalendar
                   shutdowns={shutdowns}
+                  budgets={shutdownBudgets}
+                  onBudgetChange={handleShutdownBudgetChange}
                   onAdd={(date) => {
                     setSelectedShutdown({ date });
                     setIsShutdownModalOpen(true);

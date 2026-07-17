@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { OperationalShutdown } from '../types';
-import { MACHINE_SHUTDOWN_BUDGETS } from '../constants';
 import {
     ChevronLeft,
     ChevronRight,
@@ -21,14 +20,18 @@ import {
 
 interface ShutdownCalendarProps {
     shutdowns: OperationalShutdown[];
+    budgets: Record<string, number>;
+    onBudgetChange: (machine: string, newBudget: number) => void;
     onAdd: (date: string) => void;
     onEdit: (shutdown: OperationalShutdown) => void;
 }
 
-const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, onAdd, onEdit }) => {
+const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, budgets, onBudgetChange, onAdd, onEdit }) => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [filterMachine, setFilterMachine] = useState<string>('All');
     const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly');
+    const [editingBudget, setEditingBudget] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState('');
 
     const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
     const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -48,7 +51,7 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, onAdd, o
             const machineShutdowns = shutdowns.filter(s => s.machine === machine && new Date(s.date).getFullYear() === year);
             const totalPlanned = machineShutdowns.reduce((acc, s) => acc + s.duration, 0);
             const totalRealized = machineShutdowns.reduce((acc, s) => acc + (s.realizedDuration !== undefined ? s.realizedDuration : 0), 0);
-            const budget = MACHINE_SHUTDOWN_BUDGETS[machine] || 0;
+            const budget = budgets[machine] || 0;
             const percentUsed = budget > 0 ? (totalRealized / budget) * 100 : 0;
 
             return {
@@ -102,7 +105,39 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, onAdd, o
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">{stat.machine} | Budget Anual</p>
-                            <h4 className="text-2xl font-bold text-slate-900">{stat.budget}h</h4>
+                            {editingBudget === stat.machine ? (
+                                <div className="flex items-center gap-1">
+                                    <input
+                                        type="number"
+                                        value={editValue}
+                                        onChange={(e) => setEditValue(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                const v = parseInt(editValue);
+                                                if (!isNaN(v) && v > 0) onBudgetChange(stat.machine, v);
+                                                setEditingBudget(null);
+                                            }
+                                            if (e.key === 'Escape') setEditingBudget(null);
+                                        }}
+                                        onBlur={() => setEditingBudget(null)}
+                                        className="w-20 text-2xl font-bold text-slate-900 bg-blue-50 border border-blue-200 rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-blue-200"
+                                        autoFocus
+                                    />
+                                    <span className="text-2xl font-bold text-slate-900">h</span>
+                                </div>
+                            ) : (
+                                <h4
+                                    onClick={() => {
+                                        setEditingBudget(stat.machine);
+                                        setEditValue(String(stat.budget));
+                                    }}
+                                    className="text-2xl font-bold text-slate-900 cursor-pointer hover:text-blue-600 transition-colors group/edit"
+                                >
+                                    {stat.budget}
+                                    <span className="text-lg ml-0.5 opacity-0 group-hover/edit:opacity-100 transition-opacity">✎</span>
+                                    h
+                                </h4>
+                            )}
                         </div>
                         <div className={`p-2 rounded-xl ${stat.percent > 90 ? 'bg-red-50' : 'bg-blue-50'}`}>
                             {stat.percent > 90 ? <AlertTriangle className="w-5 h-5 text-red-600" /> : <TrendingUp className="w-5 h-5 text-blue-600" />}
@@ -161,23 +196,25 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, onAdd, o
                             </div>
                             <div className="flex-1 p-3 overflow-y-auto space-y-2 scrollbar-hide">
                                 {monthShutdowns.length > 0 ? (
-                                    monthShutdowns.map(s => (
+                                    monthShutdowns.map(s => {
+                                        const isRealized = s.realizedDuration !== undefined;
+                                        return (
                                         <div
                                             key={s.id}
                                             onClick={() => onEdit(s)}
-                                            className="p-2 rounded-xl border border-slate-100 hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer group"
+                                            className={`p-2 rounded-xl border transition-all cursor-pointer group ${isRealized ? 'border-emerald-100 hover:border-emerald-200 hover:bg-emerald-50' : 'border-slate-100 hover:border-red-200 hover:bg-red-50'}`}
                                         >
                                             <div className="flex justify-between items-start mb-1">
-                                                <span className="text-[9px] font-black text-red-600 uppercase">{s.machine}</span>
+                                                <span className={`text-[9px] font-black uppercase ${isRealized ? 'text-emerald-600' : 'text-red-600'}`}>{s.machine}</span>
                                                 <span className="text-[9px] font-bold text-slate-400">{new Date(s.date).getDate().toString().padStart(2, '0')}/{(m.index + 1).toString().padStart(2, '0')}</span>
                                             </div>
-                                            <p className="text-[10px] font-bold text-slate-700 leading-tight group-hover:text-red-700">{s.service}</p>
+                                            <p className={`text-[10px] font-bold text-slate-700 leading-tight ${isRealized ? 'group-hover:text-emerald-700' : 'group-hover:text-red-700'}`}>{s.service}</p>
                                             <div className="flex items-center gap-2 mt-1.5 opacity-60">
                                                 <div className="flex items-center gap-1">
-                                                    <Clock className="w-2.5 h-2.5" />
-                                                    <span className="text-[9px] font-bold">{s.duration}h</span>
+                                                    <Clock className={`w-2.5 h-2.5 ${isRealized ? 'text-emerald-600' : ''}`} />
+                                                    <span className={`text-[9px] font-bold ${isRealized ? 'text-emerald-600' : ''}`}>{s.duration}h</span>
                                                 </div>
-                                                {s.realizedDuration !== undefined && (
+                                                {isRealized && (
                                                     <div className="flex items-center gap-1 text-emerald-600">
                                                         <CheckCircle2 className="w-2.5 h-2.5" />
                                                         <span className="text-[9px] font-bold">{s.realizedDuration}h</span>
@@ -185,7 +222,8 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, onAdd, o
                                                 )}
                                             </div>
                                         </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="h-full flex flex-col items-center justify-center opacity-20">
                                         <CalendarIcon className="w-8 h-8 mb-1" />
@@ -322,27 +360,30 @@ const ShutdownCalendar: React.FC<ShutdownCalendarProps> = ({ shutdowns, onAdd, o
                                             </div>
 
                                             <div className="space-y-1 overflow-y-auto max-h-[120px] scrollbar-hide">
-                                                {dayShutdowns.map(shutdown => (
+                                                {dayShutdowns.map(shutdown => {
+                                                    const isRealized = shutdown.realizedDuration !== undefined;
+                                                    return (
                                                     <div
                                                         key={shutdown.id}
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             onEdit(shutdown);
                                                         }}
-                                                        className="group/event p-1.5 rounded-lg border border-red-100 bg-red-50 hover:bg-red-100 transition-all cursor-pointer shadow-sm active:scale-95"
+                                                        className={`group/event p-1.5 rounded-lg border transition-all cursor-pointer shadow-sm active:scale-95 ${isRealized ? 'border-emerald-200 bg-emerald-50 hover:bg-emerald-100' : 'border-red-100 bg-red-50 hover:bg-red-100'}`}
                                                     >
                                                         <div className="flex items-center justify-between mb-0.5">
-                                                            <span className="text-[10px] font-black text-red-700 uppercase leading-none">{shutdown.machine}</span>
+                                                            <span className={`text-[10px] font-black uppercase leading-none ${isRealized ? 'text-emerald-700' : 'text-red-700'}`}>{shutdown.machine}</span>
                                                             <div className="flex items-center gap-1 opacity-60">
-                                                                <Clock className="w-2.5 h-2.5 text-red-600" />
-                                                                <span className="text-[9px] font-bold text-red-600">
+                                                                <Clock className={`w-2.5 h-2.5 ${isRealized ? 'text-emerald-600' : 'text-red-600'}`} />
+                                                                <span className={`text-[9px] font-bold ${isRealized ? 'text-emerald-600' : 'text-red-600'}`}>
                                                                     {shutdown.realizedDuration !== undefined ? shutdown.realizedDuration : shutdown.duration}h
                                                                 </span>
                                                             </div>
                                                         </div>
                                                         <p className="text-[10px] font-bold text-slate-700 leading-tight line-clamp-2">{shutdown.service}</p>
                                                     </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     );
