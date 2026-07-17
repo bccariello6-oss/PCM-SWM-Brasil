@@ -14,7 +14,8 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Loader2
+  Loader2,
+  FileSpreadsheet
 } from 'lucide-react';
 
 interface TeamManagementProps {
@@ -24,6 +25,7 @@ interface TeamManagementProps {
   onAddTechnician: () => void;
   onEditTechnician: (tech: Technician) => void;
   onDeleteTechnician: (techId: string) => void;
+  onImportTechnicians: () => void;
 }
 
 const TeamManagement: React.FC<TeamManagementProps> = ({
@@ -32,7 +34,8 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
   isLoading,
   onAddTechnician,
   onEditTechnician,
-  onDeleteTechnician
+  onDeleteTechnician,
+  onImportTechnicians
 }) => {
   const shifts = Object.values(Shift);
 
@@ -64,13 +67,22 @@ const TeamManagement: React.FC<TeamManagementProps> = ({
           <h3 className="text-lg font-bold text-slate-800">Recursos e Efetivo</h3>
           <p className="text-sm text-slate-500">Gestão de técnicos, líderes e escalas de trabalho</p>
         </div>
-        <button
-          onClick={onAddTechnician}
-          className="flex items-center gap-2 bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all"
-        >
-          <Plus className="w-5 h-5" />
-          Novo Técnico
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={onImportTechnicians}
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-all"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            Importar XLSX
+          </button>
+          <button
+            onClick={onAddTechnician}
+            className="flex items-center gap-2 bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-slate-200 hover:bg-slate-800 transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            Novo Técnico
+          </button>
+        </div>
       </div>
 
       {/* Stats Summary */}

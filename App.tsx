@@ -8,6 +8,7 @@ import AssetForm from './components/AssetForm';
 import WorkOrderList from './components/WorkOrderList';
 import TeamManagement from './components/TeamManagement';
 import ImportInfoModal from './components/ImportInfoModal';
+import ImportTechModal from './components/ImportTechModal';
 import ShutdownCalendar from './components/ShutdownCalendar';
 import ShutdownModal from './components/ShutdownModal';
 import AssetManagement from './components/AssetManagement';
@@ -84,13 +85,17 @@ const App: React.FC = () => {
 
   // Import Modal State
   const [isImportInfoOpen, setIsImportInfoOpen] = useState(false);
+  const [isTechImportOpen, setIsTechImportOpen] = useState(false);
+  const [isTechImportLoading, setIsTechImportLoading] = useState(false);
 
   // Shutdown Modal State
   const [isShutdownModalOpen, setIsShutdownModalOpen] = useState(false);
   const [selectedShutdown, setSelectedShutdown] = useState<Partial<OperationalShutdown> | undefined>();
 
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileTechInputRef = useRef<HTMLInputElement>(null);
 
   // Supabase Session effect
   useEffect(() => {
@@ -620,6 +625,98 @@ const App: React.FC = () => {
     fileInputRef.current?.click();
   };
 
+  const handleTechImportClick = () => {
+    setError(null);
+    setIsTechImportOpen(true);
+  };
+
+  const handleTechImportProceed = () => {
+    setIsTechImportOpen(false);
+    fileTechInputRef.current?.click();
+  };
+
+  const handleTechFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsTechImportLoading(true);
+    setError(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        try {
+          const bstr = evt.target?.result;
+          const wb = XLSX.read(bstr, { type: 'binary' });
+          const wsname = wb.SheetNames[0];
+          const ws = wb.Sheets[wsname];
+          const data = XLSX.utils.sheet_to_json(ws) as any[];
+
+          if (data.length === 0) throw new Error("O arquivo selecionado está vazio.");
+
+          const timestamp = new Date().toISOString();
+          const existingNames = new Set(technicians.map(t => t.name.toLowerCase()));
+          const techsToInsert = data
+            .map((row) => {
+              const name = String(row['Nome'] || '').trim();
+              if (!name) return null;
+              if (existingNames.has(name.toLowerCase())) return null;
+
+              const disciplineStr = String(row['Disciplina'] || '').trim();
+              const shiftStr = String(row['Turno'] || '').trim();
+              const isLeaderStr = String(row['Líder'] || '').trim().toLowerCase();
+
+              const discipline = Object.values(Discipline).find(d => d === disciplineStr);
+              if (!discipline) return null;
+
+              const shift = Object.values(Shift).find(s => s === shiftStr);
+              if (!shift) return null;
+
+              return {
+                name,
+                discipline,
+                shift,
+                isLeader: isLeaderStr === 'sim',
+                email: String(row['E-mail'] || '').trim() || undefined,
+                phone: String(row['WhatsApp'] || '').trim() || undefined,
+                created_at: timestamp,
+                updated_at: timestamp
+              };
+            })
+            .filter(t => t !== null);
+
+          if (techsToInsert.length > 0) {
+            const { error: insertError } = await supabase
+              .from('technicians')
+              .insert(techsToInsert);
+
+            if (insertError) throw insertError;
+
+            await fetchTechnicians();
+            setIsTechImportLoading(false);
+            showNotification(`${techsToInsert.length} técnicos importados com sucesso!`);
+            addNotification(`${techsToInsert.length} técnicos importados via Excel`, 'success');
+          } else {
+            throw new Error("Nenhum técnico novo encontrado. Verifique se os nomes já não estão cadastrados.");
+          }
+        } catch (err: any) {
+          setError(err.message || "Erro ao processar os dados da planilha.");
+          setIsTechImportLoading(false);
+        }
+      };
+      reader.onerror = () => {
+        setError("Erro na leitura do arquivo.");
+        setIsTechImportLoading(false);
+      };
+      reader.readAsBinaryString(file);
+    } catch (err: any) {
+      setError(err.message || "Erro ao processar o arquivo.");
+      setIsTechImportLoading(false);
+    }
+
+    e.target.value = '';
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -886,15 +983,27 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
-      <Sidebar activeView={activeView} setActiveView={setActiveView} />
+      <div
+        onMouseEnter={() => setSidebarExpanded(true)}
+        onMouseLeave={() => setSidebarExpanded(false)}
+      >
+        <Sidebar activeView={activeView} setActiveView={setActiveView} expanded={sidebarExpanded} />
+      </div>
 
-      <main className="flex-1 ml-64 flex flex-col h-screen overflow-hidden">
+      <main className={`flex-1 ${sidebarExpanded ? 'ml-64' : 'ml-16'} flex flex-col h-screen overflow-hidden transition-all duration-300`}>
         <input
           type="file"
           ref={fileInputRef}
           className="hidden"
           accept=".xlsx, .xls"
           onChange={handleFileChange}
+        />
+        <input
+          type="file"
+          ref={fileTechInputRef}
+          className="hidden"
+          accept=".xlsx, .xls"
+          onChange={handleTechFileChange}
         />
 
         {/* Header */}
@@ -1224,6 +1333,7 @@ const App: React.FC = () => {
                   }}
                   onEditTechnician={handleEditTechnician}
                   onDeleteTechnician={handleDeleteTechnician}
+                  onImportTechnicians={handleTechImportClick}
                 />
               )}
 
@@ -1327,6 +1437,22 @@ const App: React.FC = () => {
           onClose={() => setIsImportInfoOpen(false)}
           onProceed={handleProceedWithImport}
         />
+      )}
+
+      {isTechImportOpen && (
+        <ImportTechModal
+          onClose={() => setIsTechImportOpen(false)}
+          onProceed={handleTechImportProceed}
+        />
+      )}
+
+      {isTechImportLoading && (
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-[70]">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 flex items-center gap-4">
+            <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+            <span className="font-bold text-slate-700">Importando técnicos...</span>
+          </div>
+        </div>
       )}
 
       <ShutdownModal
