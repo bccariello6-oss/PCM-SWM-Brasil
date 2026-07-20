@@ -50,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, expanded, 
               key={item.id}
               onClick={() => setActiveView(item.id)}
               className={`w-full flex items-center rounded-xl transition-all duration-150 group ${
-                expanded ? 'gap-3 px-4 py-2.5' : 'justify-center py-3'
+                expanded ? 'gap-3 px-4 py-2.5' : 'justify-center h-[44px]'
               } ${isActive
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
                 : 'hover:bg-slate-800 hover:text-white'
