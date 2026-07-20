@@ -33,7 +33,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, expanded, 
       className={`${expanded ? 'w-64' : 'w-16'} bg-slate-900 text-slate-300 h-screen fixed left-0 top-0 flex flex-col shadow-xl z-20 transition-all duration-200 ease-out will-change-transform`}
     >
       <div className={`${expanded ? 'p-5' : 'p-3.5'} flex items-center gap-3 border-b border-slate-800 transition-all duration-200 ${expanded ? 'justify-start' : 'justify-center'}`}>
-        <div className="bg-blue-600 p-2 rounded-lg shrink-0">
+        <div className="bg-blue-swm p-2 rounded-lg shrink-0">
           <Factory className="text-white w-6 h-6" />
         </div>
         <div className={`overflow-hidden transition-all duration-200 ${expanded ? 'w-auto opacity-100' : 'w-0 opacity-0'}`}>
@@ -52,12 +52,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, expanded, 
               className={`w-full flex items-center rounded-2xl transition-all duration-150 group ${
                 expanded ? 'gap-3.5 px-5 py-3.5' : 'justify-center h-[56px]'
               } ${isActive
-                ? 'bg-blue-600/90 text-white shadow-lg shadow-blue-900/20 relative before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:bg-blue-300 before:rounded-r-full'
-                : 'hover:bg-slate-800/80 hover:text-white'
+                ? 'bg-blue-swm text-white relative before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:bg-blue-swm-2 before:rounded-r-full'
+                : 'hover:bg-blue-swm/20 hover:text-white'
               }`}
               title={!expanded ? item.label : undefined}
             >
-              <Icon className={`w-6 h-6 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`} />
+              <Icon className={`w-6 h-6 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-swm-2'}`} />
               <span className={`font-medium text-base overflow-hidden transition-all duration-200 ${
                 expanded ? 'w-auto opacity-100 ml-0' : 'w-0 opacity-0 ml-0'
               }`}>

@@ -2,9 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+  /* SWM Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-bold transition-all duration-200 ease-out cursor-pointer;
+  }
+  .btn svg {
+    @apply shrink-0;
+  }
+  .btn-blue-bis {
+    @apply btn bg-blue-swm text-white px-6 py-3 rounded-lg text-sm;
+  }
+  .btn-blue-bis:hover {
+    @apply opacity-90;
+  }
+  .btn-green-bis {
+    @apply btn bg-emerald-600 text-white px-6 py-3 rounded-lg text-sm;
+  }
+  .btn-green-bis:hover {
+    @apply opacity-90;
+  }
+  .btn-blue {
+    @apply btn bg-blue-swm-2 text-white px-6 py-3 rounded-lg text-sm;
+  }
+  .btn-blue:hover {
+    @apply opacity-90;
+  }
+  .btn-blue.fs-lg {
+    @apply text-base px-8 py-4;
+  }
+  .btn-white-anchor {
+    @apply btn bg-white text-blue-swm px-6 py-3 rounded-lg text-sm border border-blue-swm/20;
+  }
+  .btn-white-anchor:hover {
+    @apply bg-blue-swm/5;
+  }
+  .btn-primary {
+    @apply btn bg-blue-swm-2 text-white px-6 py-3 rounded-lg text-sm font-bold;
+  }
+  .btn-primary:hover {
+    @apply opacity-90;
+  }
+
+  /* SWM Typography */
+  .title-xxl {
+    @apply text-title-xxl;
+  }
+  .title-lg {
+    @apply text-title-lg;
+  }
+  .title-md {
+    @apply text-title-md;
+  }
+  .eyebrow {
+    @apply text-[12px] leading-[16px] font-black uppercase tracking-widest;
+  }
+
+  /* SWM Colors */
+  .c-blue-swm {
+    color: #171C8F;
+  }
+  .bg-blue-swm {
+    background-color: #171C8F;
+  }
+  .c-blue {
+    color: #13aff0;
+  }
+  .bg-blue {
+    background-color: #13aff0;
+  }
+
+  /* SWM Motion */
+  [data-kira-item="fade-in-up"] {
+    opacity: 0;
+    transform: translateY(20px);
+    animation: kira-fade-in-up 0.6s ease-out forwards;
+  }
+  @keyframes kira-fade-in-up {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* SWM Arrow Icon */
+  .icon-arrow-swm {
+    width: 7px;
+    height: 12px;
+  }
+}
+
 body {
   font-family: 'Inter', sans-serif;
   margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .grid-striped div:nth-child(even) {

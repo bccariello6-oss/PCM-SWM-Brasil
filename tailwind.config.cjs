@@ -10,8 +10,11 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        'blue-swm': '#171C8F',
+        'blue-swm-2': '#13aff0',
+        'gris-200': '#e5e7eb',
         primary: {
-          50: '#f0f9ff',
+          50: '#eef2ff',
           100: '#e0f2fe',
           200: '#bae6fd',
           300: '#7dd3fc',
@@ -25,6 +28,13 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
+      },
+      fontSize: {
+        'title-xxl': ['72px', { lineHeight: '80px', fontWeight: '700' }],
+        'title-lg': ['48px', { lineHeight: '56px', fontWeight: '700' }],
+        'title-md': ['32px', { lineHeight: '40px', fontWeight: '700' }],
+        'cms': ['18px', { lineHeight: '28px' }],
+        'c-noir': ['16px', { lineHeight: '24px' }],
       },
     },
   },

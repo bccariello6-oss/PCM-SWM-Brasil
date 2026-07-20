@@ -1023,7 +1023,7 @@ const App: React.FC = () => {
                 <CalendarIcon
                   className="w-4 h-4 text-slate-500 cursor-pointer hover:text-blue-600 transition-colors"
                   onClick={() => (document.getElementById('hidden-date-picker') as HTMLInputElement)?.showPicker()}
-                />
+                />{' '}
                 <input
                   type="date"
                   id="hidden-date-picker"
@@ -1064,7 +1064,7 @@ const App: React.FC = () => {
                 <input
                   type="text"
                   placeholder="Buscar OS, TAG, Técnico..."
-                  className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-64"
+                  className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-swm-2 focus:outline-none w-64"
                   value={filters.searchTerm}
                   onChange={e => setFilters({ ...filters, searchTerm: e.target.value })}
                 />
@@ -1089,7 +1089,7 @@ const App: React.FC = () => {
                     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
                   }
                 }}
-                className={`p-2 rounded-xl transition-colors relative ${isNotificationsOpen ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                className={`p-2 rounded-xl transition-colors relative ${isNotificationsOpen ? 'bg-blue-swm-2/10 text-blue-swm-2' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
               >
                 <Bell className="w-5 h-5" />
                 {notifications.some(n => !n.read) && (
@@ -1136,7 +1136,7 @@ const App: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold border border-blue-200">
+              <div className="w-10 h-10 rounded-full bg-blue-swm/10 flex items-center justify-center text-blue-swm font-bold border border-blue-swm/20">
                 {userProfile ?
                   (userProfile.fullName || 'U').split(' ').filter(Boolean).map(n => n[0]).join('').substring(0, 2).toUpperCase()
                   : '??'}
@@ -1181,8 +1181,8 @@ const App: React.FC = () => {
           {isLoading ? (
             <div className="h-full w-full flex flex-col items-center justify-center space-y-4">
               <div className="relative">
-                <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-                <Factory className="w-6 h-6 text-blue-900 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
+                <Loader2 className="w-12 h-12 text-blue-swm animate-spin" />
+                <Factory className="w-6 h-6 text-blue-swm absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" />
               </div>
               <p className="text-slate-500 font-bold animate-pulse">Processando dados industriais...</p>
             </div>
@@ -1255,7 +1255,7 @@ const App: React.FC = () => {
                         });
                         setIsOSModalOpen(true);
                       }}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all active:scale-95"
+                      className="flex items-center gap-2 bg-blue-swm text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-swm/20 hover:opacity-90 transition-all active:scale-95"
                     >
                       <Plus className="w-5 h-5" />
                       Nova Programação
@@ -1276,7 +1276,7 @@ const App: React.FC = () => {
                       <p className="text-slate-500 max-w-xs mb-6">Para iniciar a programação semanal, cadastre os técnicos na aba Equipes & Turnos ou importe uma planilha.</p>
                       <button
                         onClick={() => setActiveView('teams')}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-xl font-bold text-sm"
+                        className="px-6 py-2 bg-blue-swm text-white rounded-xl font-bold text-sm"
                       >
                         Cadastrar Equipe
                       </button>
@@ -1289,7 +1289,7 @@ const App: React.FC = () => {
                 <div className="space-y-6">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-sm font-bold border border-blue-100">
+                      <div                       className="flex items-center gap-2 px-4 py-2 bg-blue-swm/5 text-blue-swm rounded-xl text-sm font-bold border border-blue-swm/10">
                         <ClipboardList className="w-4 h-4" />
                         {filteredOrders.length} OS Listadas
                       </div>
@@ -1307,7 +1307,7 @@ const App: React.FC = () => {
                         setSelectedOS(undefined);
                         setIsOSModalOpen(true);
                       }}
-                      className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                      className="flex items-center gap-2 bg-blue-swm text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-blue-swm/20 hover:opacity-90 transition-all"
                     >
                       <Plus className="w-4 h-4" />
                       Criar Nova OS
@@ -1451,7 +1451,7 @@ const App: React.FC = () => {
       {isTechImportLoading && (
         <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex items-center justify-center z-[70]">
           <div className="bg-white rounded-2xl shadow-2xl p-8 flex items-center gap-4">
-            <Loader2 className="w-6 h-6 text-indigo-600 animate-spin" />
+            <Loader2 className="w-6 h-6 text-blue-swm animate-spin" />
             <span className="font-bold text-slate-700">Importando técnicos...</span>
           </div>
         </div>
