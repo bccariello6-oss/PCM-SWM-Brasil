@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, expanded, 
         </div>
       </div>
 
-      <nav className="flex-1 mt-4 px-2.5 flex flex-col gap-1">
+      <nav className="flex-1 mt-4 px-3.5 flex flex-col gap-1.5">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -49,11 +49,11 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, expanded, 
             <button
               key={item.id}
               onClick={() => setActiveView(item.id)}
-              className={`w-full flex items-center rounded-xl transition-all duration-150 group ${
-                expanded ? 'gap-3.5 px-4 py-3' : 'justify-center h-[52px]'
+              className={`w-full flex items-center rounded-2xl transition-all duration-150 group ${
+                expanded ? 'gap-3.5 px-5 py-3.5' : 'justify-center h-[56px]'
               } ${isActive
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
-                : 'hover:bg-slate-800 hover:text-white'
+                ? 'bg-blue-600/90 text-white shadow-lg shadow-blue-900/20 relative before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:bg-blue-300 before:rounded-r-full'
+                : 'hover:bg-slate-800/80 hover:text-white'
               }`}
               title={!expanded ? item.label : undefined}
             >
