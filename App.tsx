@@ -988,14 +988,9 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden relative">
-      <div
-        onMouseEnter={() => setSidebarExpanded(true)}
-        onMouseLeave={() => setSidebarExpanded(false)}
-      >
-        <Sidebar activeView={activeView} setActiveView={setActiveView} expanded={sidebarExpanded} />
-      </div>
+      <Sidebar activeView={activeView} setActiveView={setActiveView} expanded={sidebarExpanded} onHover={setSidebarExpanded} />
 
-      <main className={`flex-1 ${sidebarExpanded ? 'ml-64' : 'ml-16'} flex flex-col h-screen overflow-hidden transition-all duration-300`}>
+      <main className={`flex-1 ${sidebarExpanded ? 'ml-64' : 'ml-16'} flex flex-col h-screen overflow-hidden transition-all duration-200 ease-out`}>
         <input
           type="file"
           ref={fileInputRef}
