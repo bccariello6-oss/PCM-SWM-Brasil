@@ -41,7 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, expanded, 
         </div>
       </div>
 
-      <nav className="flex-1 mt-4 px-2.5 flex flex-col gap-0.5">
+      <nav className="flex-1 mt-4 px-2.5 flex flex-col gap-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -50,15 +50,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, expanded, 
               key={item.id}
               onClick={() => setActiveView(item.id)}
               className={`w-full flex items-center rounded-xl transition-all duration-150 group ${
-                expanded ? 'gap-3 px-4 py-2.5' : 'justify-center h-[44px]'
+                expanded ? 'gap-3.5 px-4 py-3' : 'justify-center h-[52px]'
               } ${isActive
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
                 : 'hover:bg-slate-800 hover:text-white'
               }`}
               title={!expanded ? item.label : undefined}
             >
-              <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`} />
-              <span className={`font-medium text-sm overflow-hidden transition-all duration-200 ${
+              <Icon className={`w-6 h-6 shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'}`} />
+              <span className={`font-medium text-base overflow-hidden transition-all duration-200 ${
                 expanded ? 'w-auto opacity-100 ml-0' : 'w-0 opacity-0 ml-0'
               }`}>
                 {item.label}
